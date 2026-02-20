@@ -110,16 +110,14 @@
   /* SESSION DROPDOWN */
   #session-dropdown { position: relative; }
   #session-trigger {
-    min-width: 120px; height: 34px; padding: 0 10px;
-    display: none; align-items: center; gap: 6px;
+    width: 34px; height: 34px;
+    display: none; align-items: center; justify-content: center;
     background: transparent; border: 1px solid var(--border);
-    border-radius: 9px; color: var(--text);
-    font-family: 'DM Mono', monospace; font-size: 12px;
-    cursor: pointer; transition: all 0.15s;
+    border-radius: 9px; color: var(--muted);
+    cursor: pointer; transition: all 0.15s; flex-shrink: 0;
   }
   #session-trigger.show { display: flex; }
-  #session-trigger:active { background: var(--surface2); }
-  #session-trigger-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+  #session-trigger:active { background: var(--surface2); transform: scale(0.93); color: var(--text); }
   #session-menu {
     position: absolute; top: calc(100% + 6px); right: 0;
     min-width: 220px; max-width: 320px;
@@ -182,6 +180,36 @@
   }
   #swap-float.show { display: flex; }
   #swap-float svg { margin-right: 2px; }
+  
+  /* MOVE FLOAT BUTTON */
+  #move-float {
+    position: fixed; z-index: 95;
+    display: none; align-items: center; gap: 8px;
+    height: 38px; padding: 0 16px;
+    background: #27ae60; color: #fff;
+    border: none; border-radius: 19px;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600;
+    cursor: pointer; white-space: nowrap;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    animation: fadeIn 0.15s ease;
+  }
+  #move-float.show { display: flex; }
+  #move-float svg { margin-right: 2px; }
+  
+  /* DUPLICATE FLOAT BUTTON */
+  #duplicate-float {
+    position: fixed; z-index: 95;
+    display: none; align-items: center; gap: 8px;
+    height: 38px; padding: 0 16px;
+    background: #9b59b6; color: #fff;
+    border: none; border-radius: 19px;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600;
+    cursor: pointer; white-space: nowrap;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    animation: fadeIn 0.15s ease;
+  }
+  #duplicate-float.show { display: flex; }
+  #duplicate-float svg { margin-right: 2px; }
 
   /* DELETE FLOATING BUTTON (appears near selected item) */
   #delete-float {
@@ -325,15 +353,20 @@
   #bottombar-inner {
     height: var(--bottombar-h);
     display: flex; align-items: center;
-    justify-content: space-around; padding: 0 8px;
+    justify-content: stretch; padding: 0 4px; gap: 0;
+  }
+  /* Both plain buttons and submenu-wrap containers take equal space */
+  .bar-btn, .submenu-wrap {
+    flex: 1; min-width: 0;
   }
   .bar-btn {
-    flex: 1; height: 56px;
+    max-width: none; height: 56px;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 4px;
     background: transparent; border: none;
     border-radius: 12px; color: var(--muted);
     cursor: pointer; transition: all 0.15s;
+    width: 100%; /* fill the submenu-wrap */
   }
   .bar-btn span { font-size: 10px; font-weight: 500; letter-spacing: 0.03em; }
   .bar-btn:active { background: var(--surface2); transform: scale(0.93); }
@@ -484,62 +517,9 @@
   /* SELECT MODE — highlight ring on selected measurement */
   .measure-selected { filter: drop-shadow(0 0 4px rgba(255,220,0,0.9)); }
 
-  /* COLOR SWATCH ROW - now embedded in submenu */
-  #color-row { display: none !important; }
-  .color-swatch {
-    width: 20px; height: 20px; border-radius: 50%;
-    border: 2px solid transparent; cursor: pointer;
-    transition: transform 0.12s, border-color 0.12s;
-    flex-shrink: 0;
-  }
-  .color-swatch.active { border-color: #fff; transform: scale(1.15); }
-  /* Color row inside submenu */
-  .submenu-color-row {
-    display: flex; align-items: center; gap: 7px;
-    padding: 8px 12px; flex-wrap: wrap;
-  }
-  /* Sub-sub menu: color picker panel */
-  .subsub-wrap { position: relative; }
-  .subsub-menu {
-    position: absolute;
-    /* Default (portrait): submenu opens upward, sub-sub opens to the RIGHT */
-    left: calc(100% + 6px);
-    top: 50%; transform: translateY(-50%) scale(0.9);
-    background: rgba(18,18,18,0.99);
-    border: 1px solid var(--border); border-radius: 12px;
-    padding: 10px 12px;
-    display: none; flex-direction: column; gap: 8px;
-    z-index: 200;
-    opacity: 0; transition: opacity 0.12s, transform 0.12s;
-    pointer-events: none;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.85);
-    min-width: 130px;
-  }
-  .subsub-menu.open {
-    display: flex; opacity: 1;
-    transform: translateY(-50%) scale(1);
-    pointer-events: auto;
-  }
-  /* Landscape: submenu opens to the LEFT, so sub-sub opens UPWARD above trigger */
-  @media (orientation: landscape) and (max-height: 600px) {
-    .subsub-menu {
-      left: 0; right: 0;
-      top: auto; bottom: calc(100% + 4px);
-      transform: scale(0.9); transform-origin: bottom center;
-    }
-    .subsub-menu.open { transform: scale(1); }
-  }
-  .swatch-grid {
-    display: grid; grid-template-columns: repeat(5, 22px); gap: 6px;
-    align-items: center; justify-items: center;
-  }
-  .subsub-label {
-    font-family: 'DM Mono', monospace; font-size: 10px;
-    color: var(--muted); letter-spacing: 0.05em;
-    padding-bottom: 4px; border-bottom: 1px solid var(--border);
-  }
+  /* color-indicator dot shown in the Color submenu item */
   .color-indicator {
-    width: 11px; height: 11px; border-radius: 50%;
+    width: 13px; height: 13px; border-radius: 50%;
     display: inline-block; flex-shrink: 0;
     border: 1.5px solid rgba(255,255,255,0.25);
     box-shadow: 0 0 0 1px rgba(0,0,0,0.3);
@@ -666,6 +646,12 @@
     #hint-toast.show { transform: translateY(0); }
     /* color-row now in submenu */
     #share-progress { bottom: 52px; left: 72px; right: 72px; }
+    
+    /* Session dropdown - move right to avoid overflow */
+    #session-menu { right: -100px; }
+    
+    /* Line submenu - move up to avoid overflow */
+    .submenu-wrap:has(#draw-submenu) .submenu { bottom: calc(100% + 36px); }
   }
 
   /* color-row now in submenu */
@@ -703,6 +689,58 @@
     pointer-events: none; z-index: 3;
   }
 
+  /* TEXT INPUT SHEET */
+  #text-input-sheet {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 350; display: none; align-items: flex-end; justify-content: center;
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  }
+  #text-input-sheet.show { display: flex; }
+  #text-input-panel {
+    width: 100%; max-width: 480px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px 20px 0 0;
+    padding: 20px 20px 12px;
+    display: flex; flex-direction: column; gap: 12px;
+    animation: slideUp 0.22s cubic-bezier(0.34,1.4,0.64,1);
+  }
+  @keyframes slideUp { from { transform: translateY(100%); opacity:0; } to { transform: translateY(0); opacity:1; } }
+  #text-input-header {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  #text-input-header span {
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase;
+  }
+  #text-input-close {
+    width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+    background: var(--surface2); border: none; border-radius: 8px;
+    color: var(--muted); cursor: pointer;
+  }
+  #text-input-close:active { background: var(--border); }
+  #text-input-field {
+    width: 100%; background: var(--surface2);
+    border: 1.5px solid var(--border); border-radius: 12px;
+    padding: 12px 14px;
+    font-family: 'DM Sans', sans-serif; font-size: 15px;
+    color: var(--text); outline: none;
+    transition: border-color 0.15s;
+    caret-color: var(--accent);
+  }
+  #text-input-field:focus { border-color: rgba(255,255,255,0.2); }
+  #text-input-field::placeholder { color: var(--muted); }
+  #text-input-confirm {
+    height: 48px; width: 100%;
+    background: var(--accent); color: #fff;
+    border: none; border-radius: 14px;
+    font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s;
+    margin-bottom: env(safe-area-inset-bottom, 8px);
+  }
+  #text-input-confirm:active { background: #cc0000; transform: scale(0.97); }
+
   /* INSTALL BANNER */
   #install-banner {
     position: fixed;
@@ -728,7 +766,8 @@
   .submenu-wrap {
     position: relative;
     display: flex; flex-direction: column;
-    align-items: center;
+    align-items: center; justify-content: center;
+    height: 56px; /* match bar-btn height */
   }
   .submenu {
     position: absolute;
@@ -760,57 +799,21 @@
     white-space: nowrap;
   }
   .submenu-item:hover, .submenu-item:active { background: var(--surface2); color: var(--text); }
-  .submenu-item.active { color: var(--accent); }
+  /* Item only glows red when its parent toolbar button is also active */
+  .bar-btn.active ~ .submenu .submenu-item.active,
+  .submenu-wrap:has(.bar-btn.active) .submenu-item.active { color: var(--accent); }
+  .submenu-item.active { color: var(--muted); }
   .submenu-item svg { flex-shrink: 0; }
   .submenu-divider { height: 1px; background: var(--border); margin: 2px 0; }
-  
-  /* Sub-sub menu (color picker) */
-  .subsub-wrap { position: relative; }
-  .subsub-menu {
-    position: absolute;
-    left: calc(100% + 4px); top: 0;
-    background: rgba(22,22,22,0.97);
-    border: 1px solid var(--border); border-radius: 12px;
-    padding: 8px;
-    display: none; flex-direction: column;
-    min-width: 160px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
-    z-index: 160;
-  }
-  .subsub-wrap:hover .subsub-menu,
-  .subsub-wrap.open .subsub-menu { display: flex; }
-  .subsub-label {
-    font-size: 10px; font-weight: 600;
-    color: var(--muted); letter-spacing: 0.08em;
-    margin-bottom: 6px; padding: 0 4px;
-  }
-  .swatch-grid {
-    display: grid; grid-template-columns: repeat(5, 1fr);
-    gap: 6px;
-  }
-  .color-swatch {
-    width: 24px; height: 24px;
-    border-radius: 6px;
-    border: 1.5px solid var(--border);
-    cursor: pointer;
-    transition: all 0.12s;
-  }
-  .color-swatch:active { transform: scale(0.9); }
-  .color-swatch.active { border-color: var(--accent); border-width: 2px; }
-  .color-indicator {
-    width: 16px; height: 16px;
-    border-radius: 4px;
-    border: 1px solid var(--border);
-    display: inline-block;
-    margin-right: 4px;
-  }
-  
-  /* landscape: open sub-menu to the right, vertically centered */
+
+  /* landscape: submenu opens to the right sidebar's left edge */
   @media (orientation: landscape) and (max-height: 600px) {
     .submenu {
       bottom: auto; top: 50%;
       left: auto; right: calc(100% + 8px);
       transform: translateY(-50%) scale(0.92);
+      max-height: calc(100dvh - 16px);
+      overflow-y: auto;
     }
     .submenu.open { transform: translateY(-50%) scale(1); }
   }
@@ -832,10 +835,11 @@
     </div>
 
     <div id="session-dropdown">
-      <button id="session-trigger">
-        <span id="session-trigger-text">Sessions</span>
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-          <path d="M2 4l3 3 3-3"/>
+      <button id="session-trigger" title="Recent sessions">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="10" cy="10" r="7.5"/>
+          <path d="M10 6v4l2.5 2.5"/>
+          <path d="M4.5 4.5A7.5 7.5 0 0 0 3 10"/>
         </svg>
       </button>
       <div id="session-menu"></div>
@@ -856,6 +860,20 @@
       Open PDF
       <input type="file" id="file-input" accept=".pdf">
     </label>
+  </div>
+</div>
+
+<!-- TEXT INPUT SHEET -->
+<div id="text-input-sheet">
+  <div id="text-input-panel">
+    <div id="text-input-header">
+      <span>Add Text Annotation</span>
+      <button id="text-input-close">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l10 10M11 1L1 11"/></svg>
+      </button>
+    </div>
+    <input id="text-input-field" type="text" maxlength="120" placeholder="Enter annotation text…" autocomplete="off" autocorrect="off" spellcheck="false">
+    <button id="text-input-confirm">Place Text</button>
   </div>
 </div>
 
@@ -1028,28 +1046,12 @@
           Cloud
         </div>
         <div class="submenu-divider"></div>
-        <div class="subsub-wrap">
-          <div class="submenu-item" id="sub-color-trigger">
-            <span class="color-indicator" id="color-indicator" style="background:#0088ff"></span>
-            Color
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="margin-left:auto;opacity:0.5"><path d="M3.5 2L6.5 5l-3 3"/></svg>
-          </div>
-          <div class="subsub-menu" id="color-subsub">
-            <div class="subsub-label">COLOR</div>
-            <div class="swatch-grid" id="submenu-color-row">
-              <div class="color-swatch" data-color="#ff0000" style="background:#ff0000"></div>
-              <div class="color-swatch" data-color="#ff6600" style="background:#ff6600"></div>
-              <div class="color-swatch" data-color="#ffcc00" style="background:#ffcc00"></div>
-              <div class="color-swatch" data-color="#00cc44" style="background:#00cc44"></div>
-              <div class="color-swatch" data-color="#0088ff" style="background:#0088ff"></div>
-              <div class="color-swatch" data-color="#aa44ff" style="background:#aa44ff"></div>
-              <div class="color-swatch" data-color="#cc3399" style="background:#cc3399"></div>
-              <div class="color-swatch" data-color="#ff4444" style="background:#ff4444"></div>
-              <div class="color-swatch" data-color="#333333" style="background:#333333"></div>
-              <div class="color-swatch active" data-color="#ffffff" style="background:#fff;border-color:#666"></div>
-            </div>
-          </div>
-        </div>
+        <label class="submenu-item" id="sub-color-trigger" style="cursor:pointer;position:relative;">
+          <span class="color-indicator" id="color-indicator" style="background:#0088ff"></span>
+          Color
+          <input type="color" id="color-input-native" value="#0088ff"
+            style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;">
+        </label>
       </div>
     </div>
     <button class="bar-btn" id="calibrate-btn">
@@ -1086,9 +1088,27 @@
 <!-- SWAP AXIS FLOAT BUTTON (box measure only) -->
 <button id="swap-float">
   <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M2 5h12M10 2l4 3-4 3M14 11H2M6 8l-4 3 4 3"/>
+    <path d="M13 3a7 7 0 1 0 1.5 4"/>
+    <path d="M14.5 1v3h-3"/>
   </svg>
-  Swap
+  Rotate
+</button>
+
+<!-- MOVE FLOAT BUTTON (for text) -->
+<button id="move-float">
+  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 2v12M2 8h12M5 5l3-3 3 3M5 11l3 3 3-3"/>
+  </svg>
+  Move
+</button>
+
+<!-- DUPLICATE FLOAT BUTTON (for text) -->
+<button id="duplicate-float">
+  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="2" y="2" width="9" height="9" rx="1.5"/>
+    <path d="M5 13h8a1 1 0 0 0 1-1V5"/>
+  </svg>
+  Copy
 </button>
 
 <!-- DELETE FLOAT BUTTON -->
@@ -1209,6 +1229,8 @@ const clearBtn        = document.getElementById('clear-btn');
 const colorRow        = document.getElementById('color-row');
 const shareProgress   = document.getElementById('share-progress');
 const deleteFloat     = document.getElementById('delete-float');
+const moveFloat       = document.getElementById('move-float');
+const duplicateFloat  = document.getElementById('duplicate-float');
 const scaleBadge      = document.getElementById('scale-badge');
 const scaleText       = document.getElementById('scale-text');
 const hintToast       = document.getElementById('hint-toast');
@@ -1240,10 +1262,13 @@ window.addEventListener('appinstalled', () => installBanner.classList.remove('sh
 
 // ── PDF LOADING ──
 function loadPDF(file) {
-  currentFilename=file.name; // capture filename
+  currentFilename=file.name;
   const reader = new FileReader();
   reader.onload = e => {
-    pdfjsLib.getDocument({ data: new Uint8Array(e.target.result) }).promise.then(doc => {
+    const bytes = e.target.result;
+    currentPdfBytes = bytes;
+    savePdfBytes(currentFilename, bytes);
+    pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise.then(doc => {
       pdfDoc=doc; totalPages=doc.numPages; currentPage=1;
       measurements=[]; annotations=[]; calibration=null; calLine=null; selectedItem=null;
       scaleBadge.classList.remove('visible');
@@ -1255,6 +1280,28 @@ function loadPDF(file) {
     }).catch(()=>showToast('Could not open PDF'));
   };
   reader.readAsArrayBuffer(file);
+}
+
+// Load a session (PDF + measurements) directly from IndexedDB — no file picker needed
+async function loadSessionFromStore(filename) {
+  showToast('Loading…');
+  const bytes = await loadPdfBytes(filename);
+  if (!bytes) { showToast('PDF not found in storage'); return; }
+  currentFilename = filename;
+  currentPdfBytes = bytes;
+  pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise.then(doc => {
+    pdfDoc=doc; totalPages=doc.numPages; currentPage=1;
+    measurements=[]; annotations=[]; calibration=null; calLine=null; selectedItem=null;
+    scaleBadge.classList.remove('visible');
+    emptyState.style.display='none';
+    canvasArea.style.display='block';
+    if(doc.numPages>1) pageNav.classList.add('show');
+    updatePageNav();
+    renderPage(currentPage, true); // renderPage calls loadSession which restores measurements
+    // Close session dropdown/menu if open
+    const sessionMenu=document.getElementById('session-menu');
+    if(sessionMenu) sessionMenu.classList.remove('open');
+  }).catch(()=>showToast('Could not restore PDF'));
 }
 
 function renderPage(num, reset=false) {
@@ -1318,6 +1365,59 @@ function snapTo90(x1,y1,x2,y2) {
 
 // ── LOCALSTORAGE PERSISTENCE ──
 let currentFilename='';
+let currentPdfBytes=null; // ArrayBuffer of the currently open PDF
+
+// ── INDEXEDDB: PDF BINARY STORAGE ──
+// localStorage can't hold multi-MB PDFs; IndexedDB handles them fine.
+const IDB_NAME='mpdf-store', IDB_VER=1, IDB_STORE='pdfs';
+let idb=null;
+
+function openIDB(){
+  return new Promise((res,rej)=>{
+    if(idb){res(idb);return;}
+    const req=indexedDB.open(IDB_NAME,IDB_VER);
+    req.onupgradeneeded=e=>{
+      e.target.result.createObjectStore(IDB_STORE);
+    };
+    req.onsuccess=e=>{ idb=e.target.result; res(idb); };
+    req.onerror=e=>rej(e.target.error);
+  });
+}
+
+async function savePdfBytes(filename, bytes){
+  try{
+    const db=await openIDB();
+    return new Promise((res,rej)=>{
+      const tx=db.transaction(IDB_STORE,'readwrite');
+      tx.objectStore(IDB_STORE).put(bytes, filename);
+      tx.oncomplete=()=>res(true);
+      tx.onerror=e=>rej(e.target.error);
+    });
+  }catch(e){ console.warn('IDB save failed',e); return false; }
+}
+
+async function loadPdfBytes(filename){
+  try{
+    const db=await openIDB();
+    return new Promise((res,rej)=>{
+      const tx=db.transaction(IDB_STORE,'readonly');
+      const req=tx.objectStore(IDB_STORE).get(filename);
+      req.onsuccess=e=>res(e.target.result||null);
+      req.onerror=e=>rej(e.target.error);
+    });
+  }catch(e){ console.warn('IDB load failed',e); return null; }
+}
+
+async function deletePdfBytes(filename){
+  try{
+    const db=await openIDB();
+    return new Promise((res)=>{
+      const tx=db.transaction(IDB_STORE,'readwrite');
+      tx.objectStore(IDB_STORE).delete(filename);
+      tx.oncomplete=()=>res();
+    });
+  }catch(e){}
+}
 
 function saveSession() {
   if (!pdfDoc || !currentFilename) return;
@@ -1377,47 +1477,90 @@ function updateSessionIndex() {
 
 function renderSessionList() {
   const sessionList=document.getElementById('session-list');
+  const sessionMenu=document.getElementById('session-menu');
+  const sessionTrigger=document.getElementById('session-trigger');
+  
   try {
     const index=JSON.parse(localStorage.getItem('mpdf-index')||'[]');
-    if (index.length===0) {
-      sessionList.classList.remove('show');
-      return;
-    }
-    sessionList.innerHTML='';
-    sessionList.classList.add('show');
     
-    index.forEach(session=>{
-      const item=document.createElement('div');
-      item.className='session-item';
-      item.innerHTML=`
-        <div class="session-icon">
-          <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="#ff0000" stroke-width="1.2">
+    // Update dropdown trigger visibility — show icon button whenever there are sessions
+    if (sessionTrigger) {
+      if (index.length > 0) {
+        sessionTrigger.classList.add('show');
+      } else {
+        sessionTrigger.classList.remove('show');
+      }
+    }
+    
+    // Update dropdown menu
+    if (sessionMenu && index.length > 0) {
+      sessionMenu.innerHTML='';
+      index.forEach(session=>{
+        const item=document.createElement('div');
+        item.className='session-menu-item';
+        item.innerHTML=`
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2">
             <path d="M3 2h6l4 4v9H3V2z"/><path d="M9 2v4h4"/>
           </svg>
-        </div>
-        <div class="session-info">
-          <div class="session-name">${session.filename}</div>
-          <div class="session-meta">${session.measurements?.length||0} measurements · ${new Date(session.timestamp).toLocaleDateString()}</div>
-        </div>
-        <button class="session-delete" onclick="deleteSession('${session.filename}',event)">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M2 2l10 10M12 2L2 12"/>
-          </svg>
-        </button>
-      `;
-      item.onclick=(e)=>{
-        if (e.target.closest('.session-delete')) return;
-        // Can't reload PDF directly, just show toast
-        showToast(`Open "${session.filename}" to restore this session`);
-      };
-      sessionList.appendChild(item);
-    });
-  } catch(e) { sessionList.classList.remove('show'); }
+          <div class="session-menu-info">
+            <div class="session-menu-name">${session.filename}</div>
+            <div class="session-menu-meta">${session.measurements?.length||0} items · ${new Date(session.timestamp).toLocaleDateString()}</div>
+          </div>
+        `;
+        item.onclick=(e)=>{
+          e.stopPropagation();
+          sessionMenu.classList.remove('open');
+          loadSessionFromStore(session.filename);
+        };
+        sessionMenu.appendChild(item);
+      });
+    }
+    
+    // Update empty state list
+    if (sessionList) {
+      if (index.length===0) {
+        sessionList.classList.remove('show');
+        return;
+      }
+      sessionList.innerHTML='';
+      sessionList.classList.add('show');
+      
+      index.forEach(session=>{
+        const item=document.createElement('div');
+        item.className='session-item';
+        item.innerHTML=`
+          <div class="session-icon">
+            <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="#ff0000" stroke-width="1.2">
+              <path d="M3 2h6l4 4v9H3V2z"/><path d="M9 2v4h4"/>
+            </svg>
+          </div>
+          <div class="session-info">
+            <div class="session-name">${session.filename}</div>
+            <div class="session-meta">${session.measurements?.length||0} measurements · ${new Date(session.timestamp).toLocaleDateString()}</div>
+          </div>
+          <button class="session-delete" onclick="deleteSession('${session.filename}',event)">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M2 2l10 10M12 2L2 12"/>
+            </svg>
+          </button>
+        `;
+        item.onclick=(e)=>{
+          if (e.target.closest('.session-delete')) return;
+          loadSessionFromStore(session.filename);
+        };
+        sessionList.appendChild(item);
+      });
+    }
+  } catch(e) { 
+    if(sessionList) sessionList.classList.remove('show'); 
+    if(sessionTrigger) sessionTrigger.classList.remove('show');
+  }
 }
 
 function deleteSession(filename,event) {
   event?.stopPropagation();
   localStorage.removeItem(`mpdf-${filename}`);
+  deletePdfBytes(filename);
   updateSessionIndex();
   showToast('Session deleted');
 }
@@ -1429,6 +1572,36 @@ function autoSave() {
 
 // Render session list on page load
 renderSessionList();
+
+// Auto-restore most recent session on startup
+(async ()=>{
+  try {
+    const index=JSON.parse(localStorage.getItem('mpdf-index')||'[]');
+    if(index.length>0){
+      const latest=index[0];
+      const bytes=await loadPdfBytes(latest.filename);
+      if(bytes){
+        loadSessionFromStore(latest.filename);
+      }
+    }
+  } catch(e){}
+})();
+
+// Session dropdown toggle
+const sessionTrigger=document.getElementById('session-trigger');
+const sessionMenu=document.getElementById('session-menu');
+if (sessionTrigger && sessionMenu) {
+  sessionTrigger.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    sessionMenu.classList.toggle('open');
+  });
+  // Close on outside click
+  document.addEventListener('pointerdown', (e)=>{
+    if (!e.target.closest('#session-dropdown')) {
+      sessionMenu.classList.remove('open');
+    }
+  }, {passive:true});
+}
 
 // ── MAGNIFIER ──
 const MAG_SIZE=100, MAG_CAPTURE=25;
@@ -1479,6 +1652,8 @@ function startMulti() {
 }
 
 let dragTimer=null, dragActive=false, p1Waiting=false;
+let panGesture=null; // {startX,startY,startPanX,startPanY} for 1-finger pan in select/null mode
+let movingAnnotation=false; // flag to disable pan when moving text
 
 function clearDragTimer() {
   if (dragTimer) { clearTimeout(dragTimer); dragTimer=null; }
@@ -1490,10 +1665,16 @@ touchLayer.addEventListener('pointerdown', e=>{
   activePointers[e.pointerId]={ x:e.clientX, y:e.clientY };
 
   if (Object.keys(activePointers).length>=2) {
-    // Second finger — go to pan/zoom, cancel draw
-    clearDragTimer(); dragActive=false;
+    // Second finger — go to pan/zoom, cancel draw and 1-finger pan
+    clearDragTimer(); dragActive=false; panGesture=null;
     drawState=null; hideMagnifier(); redrawOverlay();
     startMulti(); return;
+  }
+
+  // One-finger pan in select or no-mode (but not when moving annotation)
+  if ((!mode || mode==='select') && !movingAnnotation) {
+    if (pdfDoc) panGesture={ startX:e.clientX, startY:e.clientY, startPanX:panX, startPanY:panY };
+    return;
   }
 
   // Single finger in draw/measure mode
@@ -1502,17 +1683,13 @@ touchLayer.addEventListener('pointerdown', e=>{
     if (mode==='area') return;
 
     if (p1Waiting && drawState) {
-      // Point 1 already set — this touch sets/adjusts from p1; activate drag immediately
       dragActive=true;
       showMagnifier(e.clientX, e.clientY);
     } else {
-      // Fresh: record point 1, show p1 dot, wait for drag or second tap
       const p=screenToCanvas(e.clientX,e.clientY);
       drawState={ x:p.x, y:p.y };
       p1Waiting=false; dragActive=false;
-      redrawOverlay(); // shows the p1 dot
-
-      // After 600ms hold, activate drag mode (magnifier + ghost on move)
+      redrawOverlay();
       dragTimer=setTimeout(()=>{
         dragActive=true;
         showMagnifier(activePointers[e.pointerId]?.x ?? e.clientX,
@@ -1545,11 +1722,24 @@ touchLayer.addEventListener('pointermove', e=>{
     return;
   }
 
+  // ── ONE FINGER PAN (select / no-mode) ──
+  if (count===1 && panGesture && (!mode || mode==='select')) {
+    panX=panGesture.startPanX+(e.clientX-panGesture.startX);
+    panY=panGesture.startPanY+(e.clientY-panGesture.startY);
+    applyTransform();
+    return;
+  }
+
   // ── ONE FINGER: ghost + magnifier ──
   if (count===1 && mode && mode!=='select' && mode!=='area' && pdfDoc && drawState) {
     // In p1Waiting state, any move activates ghost immediately
     if (p1Waiting && !dragActive) {
       clearDragTimer(); dragActive=true;
+    }
+    // Keep p1 snapped to finger during the hold before drag activates
+    if (!dragActive && !p1Waiting) {
+      drawState=screenToCanvas(e.clientX,e.clientY);
+      redrawOverlay();
     }
     if (dragActive) {
       let p=screenToCanvas(e.clientX,e.clientY);
@@ -1578,6 +1768,7 @@ touchLayer.addEventListener('pointerup', e=>{
   clearDragTimer();
   const wasDragActive=dragActive;
   dragActive=false;
+  panGesture=null;
 
   const ptr=activePointers[e.pointerId];
   delete activePointers[e.pointerId];
@@ -1605,16 +1796,10 @@ touchLayer.addEventListener('pointerup', e=>{
       redrawOverlay();
       return;
     }
-    // Text annotation: tap to place
+    // Text annotation: tap to place — show in-app input sheet
     if (mode==='textanno' && ptr && pdfDoc) {
       const cp=screenToCanvas(ptr.x,ptr.y);
-      // Show a native prompt for text input
-      const txt=window.prompt('Enter annotation text:');
-      if(txt&&txt.trim()) {
-        annotations.push({type:'text',x:cp.x,y:cp.y,text:txt.trim(),color:drawColor});
-        redrawOverlay(); autoSave();
-        showToast('Text placed');
-      }
+      showTextInputSheet(cp.x, cp.y);
       return;
     }
     // Area mode: each tap adds a vertex; tap near start closes polygon
@@ -1673,7 +1858,7 @@ touchLayer.addEventListener('pointerup', e=>{
 },{passive:false});
 
 touchLayer.addEventListener('pointercancel', e=>{
-  clearDragTimer(); dragActive=false;
+  clearDragTimer(); dragActive=false; panGesture=null;
   delete activePointers[e.pointerId];
   hideMagnifier(); drawState=null; p1Waiting=false; redrawOverlay();
   if (Object.keys(activePointers).length===0) { gestureState=null; pinchEndTime=Date.now(); }
@@ -1708,13 +1893,45 @@ function setMode(m) {
   const prev=mode;
   mode=mode===m?null:m;
   selectedItem=null; hideDeleteFloat(); p1Waiting=false; areaPts=[]; areaPts=[];
-  const measActive=MEASURE_MODES.has(mode);
+  
+  // Update button active states
+  const measActive=MEASURE_MODES.has(mode) && mode!=='calibrate';
   const drawActive=DRAW_MODES.has(mode);
   measureBtn.classList.toggle('active', measActive);
   calibrateBtn.classList.toggle('active', mode==='calibrate');
   drawBtn.classList.toggle('active', drawActive);
   selectBtn.classList.toggle('active', mode==='select');
-  // color row now in submenu, not shown separately
+
+  // Sync submenu item active colours: only items inside the active parent show red
+  // If measure is not active, grey out measure submenu items
+  if (!measActive) {
+    document.querySelectorAll('#measure-submenu .submenu-item').forEach(i=>i.classList.remove('active'));
+  }
+  // If draw is not active, grey out draw submenu items
+  if (!drawActive) {
+    document.querySelectorAll('#draw-submenu .submenu-item').forEach(i=>i.classList.remove('active'));
+  }
+  // Re-highlight the correct item inside the active submenu
+  if (measActive) {
+    document.querySelectorAll('#measure-submenu .submenu-item').forEach(i=>{
+      i.classList.toggle('active', i.dataset.mode===mode);
+    });
+  }
+  if (drawActive) {
+    document.querySelectorAll('#draw-submenu .submenu-item').forEach(i=>{
+      i.classList.toggle('active', i.dataset.mode===mode);
+    });
+  }
+  
+  // Default to select mode if no mode active and PDF is loaded
+  if (mode===null && pdfDoc) {
+    setTimeout(()=>{
+      mode='select';
+      selectBtn.classList.add('active');
+      showToast('Select mode active');
+    }, 100);
+  }
+  
   closeAllSubmenus();
   drawState=null; hideMagnifier(); redrawOverlay();
   if(mode==='measure') showToast('Hold & drag to measure · short drag sets point 1');
@@ -1745,16 +1962,38 @@ document.addEventListener('pointerdown',e=>{
   if(!e.target.closest('.submenu-wrap')) closeAllSubmenus();
 },{passive:true});
 
-// Measure button: tap opens submenu; submenu item activates mode
+// Measure button: if already in a measure mode → open submenu to switch
+//                 if not in measure mode → activate default measure mode directly
 measureBtn.addEventListener('click',e=>{
   if(!pdfDoc){ showToast('Open a PDF first'); return; }
-  toggleSubmenu('measure-submenu');
+  const submenu=document.getElementById('measure-submenu');
+  const submenuOpen=submenu.classList.contains('open');
+  if(MEASURE_MODES.has(mode) && mode!=='calibrate') {
+    // Already measuring — toggle submenu to let user switch type
+    toggleSubmenu('measure-submenu');
+  } else if(submenuOpen) {
+    closeAllSubmenus();
+  } else {
+    // Not measuring — open submenu AND activate last-used measure sub-mode immediately
+    toggleSubmenu('measure-submenu');
+    setMode(measureSubMode||'measure');
+  }
 });
 
-// Draw button: tap opens submenu
+// Draw button: same pattern
 drawBtn.addEventListener('click',e=>{
   if(!pdfDoc){ showToast('Open a PDF first'); return; }
-  toggleSubmenu('draw-submenu');
+  const submenu=document.getElementById('draw-submenu');
+  const submenuOpen=submenu.classList.contains('open');
+  if(DRAW_MODES.has(mode)) {
+    toggleSubmenu('draw-submenu');
+  } else if(submenuOpen) {
+    closeAllSubmenus();
+  } else {
+    // Not drawing — open submenu AND activate last-used draw sub-mode immediately
+    toggleSubmenu('draw-submenu');
+    setMode(drawSubMode||'draw');
+  }
 });
 
 // Sub-menu item clicks
@@ -1780,37 +2019,21 @@ document.querySelectorAll('#draw-submenu .submenu-item').forEach(item=>{
     if(pdfDoc) setMode(m); else showToast('Open a PDF first');
   });
 });
-// Color sub-sub-menu toggle
-const colorTrigger=document.getElementById('sub-color-trigger');
-const colorSubsub=document.getElementById('color-subsub');
+// ── COLOR PICKER (native OS picker) ──
 const colorIndicator=document.getElementById('color-indicator');
-colorTrigger.addEventListener('click',e=>{
-  e.stopPropagation();
-  const wasOpen=colorSubsub.classList.contains('open');
-  colorSubsub.classList.toggle('open',!wasOpen);
-});
-// Close subsub on outside click
-document.addEventListener('click',e=>{
-  if(!e.target.closest('#color-subsub')&&!e.target.closest('#sub-color-trigger')){
-    colorSubsub.classList.remove('open');
-  }
-},{passive:true});
-
-// Color swatches in submenu
-document.querySelectorAll('#submenu-color-row .color-swatch').forEach(sw=>{
-  sw.addEventListener('click',e=>{
-    e.stopPropagation();
-    drawColor=sw.dataset.color;
-    document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));
-    sw.classList.add('active');
-    // Update indicator dot
+const colorNative=document.getElementById('color-input-native');
+if(colorNative){
+  colorNative.addEventListener('input',e=>{
+    drawColor=e.target.value;
     if(colorIndicator) colorIndicator.style.background=drawColor;
-    // Close subsub after picking
-    colorSubsub.classList.remove('open');
   });
-});
-// Sync indicator to current drawColor on init
-if(colorIndicator) colorIndicator.style.background = drawColor;
+  colorNative.addEventListener('change',e=>{
+    drawColor=e.target.value;
+    if(colorIndicator) colorIndicator.style.background=drawColor;
+    closeAllSubmenus();
+  });
+}
+if(colorIndicator) colorIndicator.style.background=drawColor;
 
 calibrateBtn.onclick=()=>{
   if(!pdfDoc){showToast('Open a PDF first');return;}
@@ -1914,11 +2137,13 @@ function redrawOverlay() {
       if(sel) drawRect(a.x1,a.y1,a.x2,a.y2,'rgba(255,220,0,0.4)','8','');
       drawRect(a.x1,a.y1,a.x2,a.y2,a.color,sel?'3':'2',null);
     } else if(a.type==='circle') {
+      const esw = zoom < 0.6 ? (2 * Math.min(2.5, 0.6/zoom)).toFixed(2) : '2';
+      const eswSel = zoom < 0.6 ? (3 * Math.min(2.5, 0.6/zoom)).toFixed(2) : '3';
       if(sel){
         const el=svgEl('ellipse',{cx:a.cx,cy:a.cy,rx:a.rx,ry:a.ry,stroke:'rgba(255,220,0,0.5)','stroke-width':'7',fill:'none'});
         svgOverlay.appendChild(el);
       }
-      const el=svgEl('ellipse',{cx:a.cx,cy:a.cy,rx:a.rx,ry:a.ry,stroke:a.color,'stroke-width':sel?'3':'2',fill:'none'});
+      const el=svgEl('ellipse',{cx:a.cx,cy:a.cy,rx:a.rx,ry:a.ry,stroke:a.color,'stroke-width':sel?eswSel:esw,fill:'none'});
       svgOverlay.appendChild(el);
     } else if(a.type==='cloud') {
       if(sel) drawCloudShape(a.x1,a.y1,a.x2,a.y2,'rgba(255,220,0,0.5)','7');
@@ -1954,21 +2179,13 @@ function redrawOverlay() {
       const rx1=m.x1,ry1=m.y1,rx2=m.x2,ry2=m.y2;
       const strokeW=sel?'3':'2';
       const fade='rgba(255,0,0,0.4)';
-      // p1 corner: where the user started dragging
-      const p1x=m.p1x!=null?m.p1x:rx1, p1y=m.p1y!=null?m.p1y:ry1;
-      // Which side of the rect is p1 on?
-      const p1IsLeft = Math.abs(p1x-rx1) <= Math.abs(p1x-rx2);
-      const p1IsTop  = Math.abs(p1y-ry1) <= Math.abs(p1y-ry2);
-      // p1-adjacent edges (these start faded — you're measuring AWAY from p1)
-      const hP1y = p1IsTop ? ry1 : ry2;   // horizontal edge at p1's corner
-      const vP1x = p1IsLeft ? rx1 : rx2;  // vertical edge at p1's corner
-      // p2-adjacent edges (opposite corner — where you're measuring TO, gets labels)
-      const hP2y = p1IsTop ? ry2 : ry1;
-      const vP2x = p1IsLeft ? rx2 : rx1;
-      // swap toggles which corner's edges get the labels
-      const sw = !!m.swapAxis;
-      const [hLabelY, hFadeY] = sw ? [hP1y, hP2y] : [hP2y, hP1y];
-      const [vLabelX, vFadeX] = sw ? [vP1x, vP2x] : [vP2x, vP1x];
+      // 4 orientations: which corner gets the solid (measured) edges
+      // corner = 0: bottom-right, 1: bottom-left, 2: top-right, 3: top-left
+      const corner=(m.swapAxis||0)%4;
+      const hLabelY = (corner===0||corner===1) ? ry2 : ry1; // bottom or top
+      const hFadeY  = (corner===0||corner===1) ? ry1 : ry2;
+      const vLabelX = (corner===0||corner===2) ? rx2 : rx1; // right or left
+      const vFadeX  = (corner===0||corner===2) ? rx1 : rx2;
       // Draw all 4 sides
       drawLine(rx1,hLabelY,rx2,hLabelY,'#ff0000',strokeW,null,null);
       drawLine(rx1,hFadeY,rx2,hFadeY,fade,strokeW,null,null);
@@ -2003,18 +2220,18 @@ function redrawOverlay() {
       }
     }
     areaPts.forEach(pt=>{
-      svgOverlay.appendChild(svgEl('circle',{cx:pt.x,cy:pt.y,r:'5',fill:'#ff0000',opacity:'0.9'}));
+      svgOverlay.appendChild(svgEl('circle',{cx:pt.x,cy:pt.y,r:`${3/zoom}`,fill:'#ff0000',opacity:'0.9'}));
     });
   }
 
   // Point 1 waiting indicator - size adjusted for zoom
   const p1Color=DRAW_MODES.has(mode)?drawColor:'#ff0000';
-  const baseR=8, bigR=16; // base radii in canvas pixels
+  const baseR=4, bigR=9; // base radii in canvas pixels (kept small & precise)
   const r1=baseR/zoom, r2=bigR/zoom; // adjust for zoom
   if (drawState) {
     if (p1Waiting) {
       svgOverlay.appendChild(svgEl('circle',{cx:drawState.x,cy:drawState.y,r:r2,
-        fill:'none',stroke:p1Color,'stroke-width':(1.5/zoom),opacity:'0.4'}));
+        fill:'none',stroke:p1Color,'stroke-width':(1/zoom),opacity:'0.35'}));
     }
     svgOverlay.appendChild(svgEl('circle',{cx:drawState.x,cy:drawState.y,r:r1,
       fill:p1Color,opacity:'0.9'}));
@@ -2063,7 +2280,9 @@ function drawGhost(x1,y1,x2,y2) {
 }
 
 function drawLine(x1,y1,x2,y2,color,w,dash,me) {
-  const a={x1,y1,x2,y2,stroke:color,'stroke-width':w,'stroke-linecap':'round',fill:'none'};
+  // Scale stroke width up when zoomed out below 60% so lines stay readable
+  const sw = zoom < 0.6 ? (parseFloat(w) * Math.min(2.5, 0.6/zoom)).toFixed(2) : w;
+  const a={x1,y1,x2,y2,stroke:color,'stroke-width':sw,'stroke-linecap':'round',fill:'none'};
   if(dash) a['stroke-dasharray']=dash;
   if(me) a['marker-end']=me;
   svgOverlay.appendChild(svgEl('line',a));
@@ -2072,7 +2291,8 @@ function drawLine(x1,y1,x2,y2,color,w,dash,me) {
 function drawRect(x1,y1,x2,y2,color,w,dash) {
   const rx=Math.min(x1,x2), ry=Math.min(y1,y2);
   const rw=Math.abs(x2-x1), rh=Math.abs(y2-y1);
-  const a={x:rx,y:ry,width:rw,height:rh,stroke:color,'stroke-width':w,
+  const sw = zoom < 0.6 ? (parseFloat(w) * Math.min(2.5, 0.6/zoom)).toFixed(2) : w;
+  const a={x:rx,y:ry,width:rw,height:rh,stroke:color,'stroke-width':sw,
     'stroke-linecap':'round','stroke-linejoin':'round',fill:'none'};
   if(dash) a['stroke-dasharray']=dash;
   svgOverlay.appendChild(svgEl('rect',a));
@@ -2113,14 +2333,23 @@ function drawLabel(x1,y1,x2,y2,text,color='#ff0000') {
   const angle=Math.atan2(y2-y1,x2-x1);
   const angleDeg=angle*180/Math.PI;
   const flip=(angleDeg>90||angleDeg<-90)?180:0;
-  const tw=text.length*7.8+16;
+  
+  // Scale text size inversely with zoom
+  const baseFontSize=11; // base size in canvas pixels
+  const fontSize=baseFontSize/zoom;
+  const charWidth=fontSize*0.7;
+  const tw=text.length*charWidth+fontSize*1.5;
+  const th=fontSize*1.6;
+  
   // Offset perpendicular to line so label doesn't cover it
-  const perpX=-Math.sin(angle)*16, perpY=Math.cos(angle)*16;
+  const offsetDist=fontSize*1.4;
+  const perpX=-Math.sin(angle)*offsetDist, perpY=Math.cos(angle)*offsetDist;
   const ox=perpY>0?-perpX:perpX, oy=perpY>0?-perpY:perpY;
   const lx=mx+ox, ly=my+oy;
   const g=svgEl('g',{transform:`rotate(${angleDeg+flip},${lx},${ly})`});
-  g.appendChild(svgEl('rect',{x:lx-tw/2,y:ly-15,width:tw,height:18,fill:'rgba(255,255,255,0.95)',rx:'4'}));
-  const t=svgEl('text',{x:lx,y:ly-3,'text-anchor':'middle','dominant-baseline':'auto',class:'measure-label',style:`fill:${color}`});
+  g.appendChild(svgEl('rect',{x:lx-tw/2,y:ly-th*0.85,width:tw,height:th,fill:'rgba(255,255,255,0.95)',rx:fontSize*0.36}));
+  const t=svgEl('text',{x:lx,y:ly-fontSize*0.27,'text-anchor':'middle','dominant-baseline':'auto',
+    class:'measure-label',style:`fill:${color};font-size:${fontSize}px`});
   t.textContent=text; g.appendChild(t); svgOverlay.appendChild(g);
 }
 
@@ -2158,7 +2387,8 @@ function drawCloudShape(x1,y1,x2,y2,color,w) {
     d+=`A${bx*0.5},${by} 0 0 1 ${cx},${cy-by} `;
   }
   d+='Z';
-  const el=svgEl('path',{d,stroke:color,'stroke-width':w,'stroke-linejoin':'round','stroke-linecap':'round',fill:'rgba(255,255,255,0.04)'});
+  const sw = zoom < 0.6 ? (parseFloat(w) * Math.min(2.5, 0.6/zoom)).toFixed(2) : w;
+  const el=svgEl('path',{d,stroke:color,'stroke-width':sw,'stroke-linejoin':'round','stroke-linecap':'round',fill:'rgba(255,255,255,0.04)'});
   svgOverlay.appendChild(el);
 }
 
@@ -2167,13 +2397,17 @@ let textInputActive=null; // {x,y,color,el}
 function drawTextAnno(a,sel){
   const tw=Math.max(60,(a.text||'').length*8+20);
   const g=svgEl('g',{});
+  // Scale font size up when zoomed out below 60% so text stays readable
+  const baseFontSize=14;
+  const fontSize = zoom < 0.6 ? Math.round(baseFontSize * Math.min(2.5, 0.6/zoom)) : baseFontSize;
+  const strokeW = zoom < 0.6 ? (2.5 * Math.min(2.5, 0.6/zoom)).toFixed(1) : '2.5';
   if(sel){
     g.appendChild(svgEl('rect',{x:a.x-4,y:a.y-18,width:tw+8,height:24,fill:'rgba(255,220,0,0.25)',rx:'3'}));
   }
   const t=svgEl('text',{x:a.x,y:a.y,'dominant-baseline':'auto',
-    'font-family':"'DM Mono', monospace",'font-size':'14',
+    'font-family':"'DM Mono', monospace",'font-size':fontSize,
     'font-weight':'500',fill:a.color,'paint-order':'stroke',
-    stroke:'white','stroke-width':'2.5','stroke-linejoin':'round'});
+    stroke:'white','stroke-width':strokeW,'stroke-linejoin':'round'});
   t.textContent=a.text||'';
   g.appendChild(t);
   svgOverlay.appendChild(g);
@@ -2319,7 +2553,21 @@ function handleSelectTap(cx,cy){
         pointToSegmentDist(cx,cy,a.x1,a.y2,a.x1,a.y1)
       );
     } else if(a.type==='text') {
-      d=Math.hypot(cx-a.x,cy-a.y);
+      // Hit test against text bounding box
+      const tw=Math.max(60,(a.text||'').length*8+20);
+      const th=24;
+      const tx1=a.x-4, ty1=a.y-18, tx2=tx1+tw, ty2=ty1+th;
+      if (cx>=tx1 && cx<=tx2 && cy>=ty1 && cy<=ty2) {
+        d=0; // Inside box
+      } else {
+        // Distance to nearest edge
+        d=Math.min(
+          pointToSegmentDist(cx,cy,tx1,ty1,tx2,ty1),
+          pointToSegmentDist(cx,cy,tx2,ty1,tx2,ty2),
+          pointToSegmentDist(cx,cy,tx2,ty2,tx1,ty2),
+          pointToSegmentDist(cx,cy,tx1,ty2,tx1,ty1)
+        );
+      }
     } else {
       d=pointToSegmentDist(cx,cy,a.x1,a.y1,a.x2,a.y2);
     }
@@ -2347,31 +2595,47 @@ function showDeleteFloat(item){
   else if(obj.type==='circle'){ mx=obj.cx; my=obj.cy; }
   else if(obj.type==='text'){ mx=obj.x; my=obj.y; }
   else { mx=(obj.x1+obj.x2)/2; my=(obj.y1+obj.y2)/2; }
-  // Show swap button for box measurements
-  const swapFloat=document.getElementById('swap-float');
-  if(item.type==='measurement'&&obj.type==='box'){
-    const r=canvasViewport.getBoundingClientRect();
-    const ssx=r.left+panX+mx*zoom, ssy=r.top+panY+my*zoom;
-    const sfw=80, sfh=32;
-    let sfx=ssx-sfw/2-50, sfy=ssy-sfh-18;
-    sfx=Math.max(8,Math.min(window.innerWidth-sfw-8,sfx));
-    sfy=Math.max(8,Math.min(window.innerHeight-sfh-8,sfy));
-    swapFloat.style.left=sfx+'px'; swapFloat.style.top=sfy+'px';
-    swapFloat.classList.add('show');
-  } else { swapFloat.classList.remove('show'); }
+
   const r=canvasViewport.getBoundingClientRect();
   const sx=r.left+panX+mx*zoom, sy=r.top+panY+my*zoom;
-  const fw=90, fh=32;
-  let fx=sx-fw/2, fy=sy-fh-18;
-  fx=Math.max(8,Math.min(window.innerWidth-fw-8,fx));
-  fy=Math.max(8,Math.min(window.innerHeight-fh-8,fy));
-  deleteFloat.style.left=fx+'px'; deleteFloat.style.top=fy+'px';
-  deleteFloat.classList.add('show');
+  const GAP=16, BTN_H=38;
+
+  // Build ordered list of visible buttons for this item type
+  const swapFloat=document.getElementById('swap-float');
+  const activeBtns=[];
+  if(item.type==='measurement'&&obj.type==='box') activeBtns.push({el:swapFloat,w:80});
+  if(item.type==='annotation'&&obj.type==='text'){
+    activeBtns.push({el:moveFloat,w:80});
+    activeBtns.push({el:duplicateFloat,w:88});
+  }
+  activeBtns.push({el:deleteFloat,w:90});
+
+  // Hide buttons not in use
+  [swapFloat,moveFloat,duplicateFloat,deleteFloat].forEach(b=>{
+    if(b&&!activeBtns.find(a=>a.el===b)) b.classList.remove('show');
+  });
+
+  // Compute total row width and centre it over the selection point
+  const totalW=activeBtns.reduce((s,b)=>s+b.w,0)+GAP*(activeBtns.length-1);
+  let rowX=sx-totalW/2;
+  let rowY=sy-BTN_H-28;
+  rowX=Math.max(8,Math.min(window.innerWidth-totalW-8,rowX));
+  rowY=Math.max(8,Math.min(window.innerHeight-BTN_H-8,rowY));
+
+  let cursor=rowX;
+  activeBtns.forEach(({el,w})=>{
+    el.style.left=cursor+'px';
+    el.style.top=rowY+'px';
+    el.classList.add('show');
+    cursor+=w+GAP;
+  });
 }
 
 function hideDeleteFloat(){
   deleteFloat.classList.remove('show');
   document.getElementById('swap-float').classList.remove('show');
+  if(moveFloat) moveFloat.classList.remove('show');
+  if(duplicateFloat) duplicateFloat.classList.remove('show');
 }
 
 function deleteSelected(){
@@ -2389,9 +2653,109 @@ document.getElementById('swap-float').onclick=()=>{
   if(!selectedItem||selectedItem.type!=='measurement') return;
   const m=measurements[selectedItem.index];
   if(!m||m.type!=='box') return;
-  m.swapAxis=!m.swapAxis;
+  // Cycle through 4 corners: 0=bottom-right, 1=bottom-left, 2=top-right, 3=top-left
+  m.swapAxis=((m.swapAxis||0)+1)%4;
   redrawOverlay(); autoSave();
 };
+
+// Move text annotation — live drag
+if(moveFloat) {
+  moveFloat.onclick=()=>{
+    if(!selectedItem||selectedItem.type!=='annotation') return;
+    const a=annotations[selectedItem.index];
+    if(!a||a.type!=='text') return;
+    hideDeleteFloat();
+    movingAnnotation=true; // Disable pan gesture while moving
+    showToast('Drag to reposition text');
+
+    let dragging=false;
+    const onDown=(e)=>{
+      e.preventDefault();
+      dragging=true;
+      touchLayer.setPointerCapture(e.pointerId);
+    };
+    const onMove=(e)=>{
+      if(!dragging) return;
+      e.preventDefault();
+      const p=screenToCanvas(e.clientX,e.clientY);
+      a.x=p.x; a.y=p.y;
+      redrawOverlay();
+    };
+    const onUp=(e)=>{
+      if(!dragging) return;
+      dragging=false;
+      movingAnnotation=false; // Re-enable pan gesture
+      autoSave();
+      showToast('Text moved');
+      touchLayer.removeEventListener('pointerdown',onDown);
+      touchLayer.removeEventListener('pointermove',onMove);
+      touchLayer.removeEventListener('pointerup',onUp);
+      // Re-select to show float buttons at new position
+      showDeleteFloat(selectedItem);
+    };
+    touchLayer.addEventListener('pointerdown',onDown,{passive:false});
+    touchLayer.addEventListener('pointermove',onMove,{passive:false});
+    touchLayer.addEventListener('pointerup',onUp);
+  };
+}
+
+// Duplicate text annotation
+if(duplicateFloat) {
+  duplicateFloat.onclick=()=>{
+    if(!selectedItem||selectedItem.type!=='annotation') return;
+    const a=annotations[selectedItem.index];
+    if(!a||a.type!=='text') return;
+    // Create duplicate with slight offset
+    const copy={...a, x:a.x+20, y:a.y+20};
+    annotations.push(copy);
+    selectedItem={type:'annotation',index:annotations.length-1};
+    redrawOverlay(); autoSave();
+    showDeleteFloat(selectedItem);
+    showToast('Text duplicated');
+  };
+}
+
+// ── TEXT INPUT SHEET ──
+const textInputSheet   = document.getElementById('text-input-sheet');
+const textInputField   = document.getElementById('text-input-field');
+const textInputConfirm = document.getElementById('text-input-confirm');
+const textInputClose   = document.getElementById('text-input-close');
+let _pendingTextPos    = null;
+
+function showTextInputSheet(cx, cy) {
+  _pendingTextPos = { x: cx, y: cy };
+  textInputField.value = '';
+  textInputSheet.classList.add('show');
+  // Slight delay so sheet animation completes before keyboard pops
+  setTimeout(() => textInputField.focus(), 180);
+}
+
+function hideTextInputSheet() {
+  textInputSheet.classList.remove('show');
+  textInputField.blur();
+  _pendingTextPos = null;
+}
+
+function commitTextAnnotation() {
+  const txt = textInputField.value.trim();
+  if (txt && _pendingTextPos) {
+    annotations.push({ type:'text', x:_pendingTextPos.x, y:_pendingTextPos.y, text:txt, color:drawColor });
+    redrawOverlay(); autoSave();
+    showToast('Text placed');
+  }
+  hideTextInputSheet();
+}
+
+textInputConfirm.addEventListener('click', commitTextAnnotation);
+textInputClose.addEventListener('click', hideTextInputSheet);
+textInputField.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); commitTextAnnotation(); }
+  if (e.key === 'Escape') { e.preventDefault(); hideTextInputSheet(); }
+});
+// Tap backdrop to dismiss
+textInputSheet.addEventListener('pointerdown', e => {
+  if (e.target === textInputSheet) hideTextInputSheet();
+});
 
 // ── SHARE / SCREENSHOT ──
 let shareTimer=null;
