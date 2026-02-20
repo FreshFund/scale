@@ -1,0 +1,2489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MeasurePDF">
+<meta name="theme-color" content="#0f0f0f">
+<title>MeasurePDF</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #232323;
+    --accent: #ff0000;
+    --accent-dim: rgba(255,0,0,0.15);
+    --text: #f0ede8;
+    --muted: #666;
+    --border: #2a2a2a;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --toolbar-h: 56px;
+    --bottombar-h: 72px;
+  }
+
+  html, body {
+    height: 100%; height: -webkit-fill-available;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* TOPBAR */
+  #topbar {
+    position: fixed; top: 0; left: 0; right: 0;
+    padding-top: var(--safe-top);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    z-index: 100;
+  }
+  #topbar-inner {
+    height: var(--toolbar-h);
+    display: flex; align-items: center;
+    padding: 0 12px; gap: 8px;
+  }
+  #brand {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px; font-weight: 500;
+    color: var(--text); letter-spacing: 0.06em;
+    display: flex; align-items: center; gap: 8px;
+    flex: 1;
+  }
+  #brand-logo {
+    width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--accent);
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+  #brand-logo svg { width: 14px; height: 14px; }
+  #brand-text { display: none; } /* Hidden on mobile */
+  #brand em { color: var(--accent); font-style: normal; }
+  
+  /* Show full branding on tablets+ */
+  @media (min-width: 768px) {
+    #brand-text { display: inline; }
+  }
+
+  #scale-badge {
+    position: fixed;
+    top: calc(var(--toolbar-h) + var(--safe-top) + 12px);
+    right: 12px;
+    display: none !important; /* Hidden */
+    align-items: center; gap: 4px;
+    height: 22px;
+    background: rgba(20,20,20,0.28);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 8px; padding: 0 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; color: rgba(255,255,255,0.22);
+    letter-spacing: 0.04em; white-space: nowrap;
+    z-index: 89; pointer-events: none;
+  }
+  #scale-badge svg { opacity: 0.3; }
+  #scale-badge.visible { display: flex; }
+
+  .topbar-icon-btn {
+    width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent; border: 1px solid var(--border);
+    border-radius: 9px; color: var(--muted);
+    cursor: pointer; transition: all 0.15s; flex-shrink: 0;
+  }
+  .topbar-icon-btn:active { background: var(--surface2); transform: scale(0.93); color: var(--text); }
+  .topbar-danger-btn:active { border-color: rgba(231,76,60,0.4); color: #e74c3c; }
+
+  /* SESSION DROPDOWN */
+  #session-dropdown { position: relative; }
+  #session-trigger {
+    min-width: 120px; height: 34px; padding: 0 10px;
+    display: none; align-items: center; gap: 6px;
+    background: transparent; border: 1px solid var(--border);
+    border-radius: 9px; color: var(--text);
+    font-family: 'DM Mono', monospace; font-size: 12px;
+    cursor: pointer; transition: all 0.15s;
+  }
+  #session-trigger.show { display: flex; }
+  #session-trigger:active { background: var(--surface2); }
+  #session-trigger-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+  #session-menu {
+    position: absolute; top: calc(100% + 6px); right: 0;
+    min-width: 220px; max-width: 320px;
+    background: rgba(22,22,22,0.97);
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 6px; display: none; flex-direction: column;
+    max-height: 400px; overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6); z-index: 200;
+  }
+  #session-menu.open { display: flex; }
+  .session-menu-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; cursor: pointer; color: var(--text); font-size: 13px; transition: background 0.12s; }
+  .session-menu-item:hover, .session-menu-item:active { background: var(--surface2); }
+  .session-menu-item svg { flex-shrink: 0; opacity: 0.6; }
+  .session-menu-info { flex: 1; min-width: 0; }
+  .session-menu-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .session-menu-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* CONFIRM DIALOG */
+  #confirm-dialog {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.65);
+    z-index: 400; display: none; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  }
+  #confirm-dialog.show { display: flex; }
+  #confirm-panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; padding: 28px 24px 20px;
+    max-width: 280px; width: 90%; text-align: center;
+    animation: scaleIn 0.2s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes scaleIn { from { transform: scale(0.85); opacity:0; } to { transform: scale(1); opacity:1; } }
+  #confirm-panel h4 {
+    font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500;
+    color: var(--text); letter-spacing: 0.06em; margin-bottom: 8px;
+  }
+  #confirm-panel p { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 20px; }
+  .confirm-actions { display: flex; gap: 10px; }
+  .confirm-btn {
+    flex: 1; height: 44px; border-radius: 12px;
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
+    cursor: pointer; border: 1.5px solid var(--border);
+    background: transparent; color: var(--muted); transition: all 0.15s;
+  }
+  .confirm-btn:active { background: var(--surface2); }
+  .confirm-btn.danger { background: #c0392b; border-color: #c0392b; color: #fff; }
+  .confirm-btn.danger:active { background: #a93226; transform: scale(0.97); }
+
+  /* SWAP FLOAT BUTTON (box measure, appears next to delete) */
+  #swap-float {
+    position: fixed; z-index: 95;
+    display: none; align-items: center; gap: 8px;
+    height: 38px; padding: 0 16px;
+    background: #1a5fb4; color: #fff;
+    border: none; border-radius: 19px;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600;
+    cursor: pointer; white-space: nowrap;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    animation: fadeIn 0.15s ease;
+  }
+  #swap-float.show { display: flex; }
+  #swap-float svg { margin-right: 2px; }
+
+  /* DELETE FLOATING BUTTON (appears near selected item) */
+  #delete-float {
+    position: fixed;
+    z-index: 95;
+    display: none; align-items: center; gap: 8px;
+    height: 38px; padding: 0 16px;
+    background: #c0392b; color: #fff;
+    border: none; border-radius: 19px;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600;
+    cursor: pointer; white-space: nowrap;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    animation: fadeIn 0.15s ease;
+  }
+  #delete-float.show { display: flex; }
+  #delete-float svg { margin-right: 2px; }
+
+  #open-btn-top {
+    display: flex; align-items: center; gap: 6px;
+    height: 36px; padding: 0 14px;
+    background: var(--accent); color: #fff;
+    border: none; border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 500;
+    cursor: pointer; white-space: nowrap;
+    transition: all 0.15s;
+  }
+  #open-btn-top:active { background: #d4561a; transform: scale(0.96); }
+
+  /* CANVAS AREA */
+  #canvas-area {
+    position: fixed;
+    top: calc(var(--toolbar-h) + var(--safe-top));
+    bottom: calc(var(--bottombar-h) + var(--safe-bottom));
+    left: 0; right: 0;
+    overflow: hidden;
+    background: var(--bg);
+    display: none;
+  }
+  #canvas-viewport {
+    position: relative; width: 100%; height: 100%;
+    overflow: hidden; touch-action: none;
+  }
+  #canvas-wrap {
+    position: absolute; transform-origin: 0 0;
+    will-change: transform;
+  }
+  #pdf-canvas { display: block; background: #fff; box-shadow: 0 8px 48px rgba(0,0,0,0.5); }
+  #svg-overlay { position: absolute; top: 0; left: 0; pointer-events: none; }
+  #touch-layer { position: absolute; top: 0; left: 0; z-index: 10; }
+
+  /* EMPTY STATE */
+  #empty-state {
+    position: fixed;
+    top: calc(var(--toolbar-h) + var(--safe-top));
+    bottom: calc(var(--bottombar-h) + var(--safe-bottom));
+    left: 0; right: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 12px; padding: 32px; text-align: center;
+    z-index: 50;
+  }
+  .empty-icon {
+    width: 72px; height: 72px; border-radius: 20px;
+    background: var(--surface); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 8px;
+  }
+  #empty-state h2 {
+    font-family: 'DM Mono', monospace;
+    font-size: 16px; font-weight: 400;
+    color: var(--text); letter-spacing: 0.04em;
+  }
+  #empty-state p { font-size: 13px; color: var(--muted); line-height: 1.6; max-width: 260px; }
+  #open-btn-empty {
+    margin-top: 8px; height: 52px; padding: 0 32px;
+    background: var(--accent); color: #fff;
+    border: none; border-radius: 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px; font-weight: 500;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 8px;
+    transition: all 0.15s;
+  }
+  #open-btn-empty:active { background: #cc0000; transform: scale(0.97); }
+
+  /* SESSION LIST */
+  #session-list {
+    width: 100%; max-width: 400px;
+    margin-top: 32px;
+    display: none; flex-direction: column; gap: 8px;
+  }
+  #session-list.show { display: flex; }
+  .session-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: flex; align-items: center; gap: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .session-item:active { background: var(--surface2); transform: scale(0.98); }
+  .session-icon {
+    width: 40px; height: 40px;
+    background: var(--surface2);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .session-info { flex: 1; min-width: 0; }
+  .session-name {
+    font-size: 14px; font-weight: 500;
+    color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .session-meta {
+    font-size: 11px; color: var(--muted);
+    margin-top: 2px;
+  }
+  .session-delete {
+    width: 32px; height: 32px;
+    background: transparent;
+    border: none; border-radius: 8px;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .session-delete:active { background: rgba(231,76,60,0.15); color: #e74c3c; }
+
+  /* BOTTOM BAR */
+  #bottombar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    padding-bottom: var(--safe-bottom);
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    z-index: 100;
+  }
+  #bottombar-inner {
+    height: var(--bottombar-h);
+    display: flex; align-items: center;
+    justify-content: space-around; padding: 0 8px;
+  }
+  .bar-btn {
+    flex: 1; height: 56px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 4px;
+    background: transparent; border: none;
+    border-radius: 12px; color: var(--muted);
+    cursor: pointer; transition: all 0.15s;
+  }
+  .bar-btn span { font-size: 10px; font-weight: 500; letter-spacing: 0.03em; }
+  .bar-btn:active { background: var(--surface2); transform: scale(0.93); }
+  .bar-btn.active { color: var(--accent); }
+  .bar-btn.active .bic { background: var(--accent-dim); border-color: rgba(232,98,26,0.3); }
+  .bic {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent; border: 1px solid transparent;
+    transition: all 0.15s;
+  }
+  .bar-btn.danger:active { color: #e74c3c; }
+  .bar-btn.danger:active .bic { background: rgba(231,76,60,0.12); border-color: rgba(231,76,60,0.3); }
+
+  /* PAGE NAV */
+  #page-nav {
+    position: fixed;
+    top: calc(var(--toolbar-h) + var(--safe-top) + 12px);
+    right: 12px;
+    display: none; flex-direction: column;
+    align-items: center; gap: 4px; z-index: 90;
+  }
+  #page-nav.show { display: flex; }
+  .pnav-btn {
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(26,26,26,0.92);
+    border: 1px solid var(--border); border-radius: 10px;
+    color: var(--text); cursor: pointer;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    transition: all 0.15s;
+  }
+  .pnav-btn:active { transform: scale(0.9); }
+  .pnav-btn:disabled { opacity: 0.25; pointer-events: none; }
+  #page-pill {
+    background: rgba(26,26,26,0.92);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 4px 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; color: var(--muted);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  }
+
+  /* ZOOM PILL */
+  #zoom-pill {
+    position: fixed;
+    top: calc(var(--toolbar-h) + var(--safe-top) + 12px);
+    left: 12px;
+    background: rgba(26,26,26,0.92);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 4px 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; color: var(--muted);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    z-index: 90; opacity: 0; transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  #zoom-pill.show { opacity: 1; }
+
+  /* HINT TOAST */
+  #hint-toast {
+    position: fixed;
+    bottom: calc(var(--bottombar-h) + var(--safe-bottom) + 12px);
+    left: 50%; transform: translateX(-50%) translateY(8px);
+    background: rgba(15,15,15,0.95);
+    border: 1px solid var(--border); border-radius: 20px;
+    padding: 8px 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; color: var(--muted);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    z-index: 200; white-space: nowrap;
+    opacity: 0; transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+  }
+  #hint-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* CALIBRATE SHEET */
+  #cal-sheet {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 300; display: none; align-items: flex-end;
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  }
+  #cal-sheet.show { display: flex; }
+  #cal-panel {
+    width: 100%; background: var(--surface);
+    border-radius: 24px 24px 0 0;
+    border-top: 1px solid var(--border);
+    padding: 0 20px calc(20px + var(--safe-bottom));
+    animation: slideUp 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .sheet-handle {
+    width: 36px; height: 4px; background: var(--border);
+    border-radius: 2px; margin: 12px auto 20px;
+  }
+  #cal-panel h3 {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px; font-weight: 500;
+    color: var(--text); letter-spacing: 0.06em; margin-bottom: 6px;
+  }
+  #cal-panel p { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 16px; }
+  #cal-info-box {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px; color: var(--accent);
+    margin-bottom: 16px; min-height: 44px;
+    display: flex; align-items: center;
+  }
+  .cal-input-row { display: flex; gap: 10px; margin-bottom: 20px; }
+  .cal-input {
+    flex: 1; height: 52px;
+    background: var(--surface2); border: 1.5px solid var(--border);
+    border-radius: 14px; color: var(--text);
+    font-family: 'DM Mono', monospace; font-size: 16px;
+    padding: 0 16px; outline: none;
+    -webkit-appearance: none; transition: border-color 0.15s;
+  }
+  .cal-input:focus { border-color: var(--accent); }
+  .cal-select {
+    height: 52px; background: var(--surface2);
+    border: 1.5px solid var(--border); border-radius: 14px;
+    color: var(--text); font-family: 'DM Mono', monospace;
+    font-size: 14px; padding: 0 12px; outline: none;
+    -webkit-appearance: none; appearance: none;
+    min-width: 76px; text-align: center; cursor: pointer;
+  }
+  .cal-actions { display: flex; gap: 10px; }
+  .cal-btn {
+    flex: 1; height: 52px; border-radius: 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px; font-weight: 500;
+    cursor: pointer; border: 1.5px solid var(--border);
+    background: transparent; color: var(--muted); transition: all 0.15s;
+  }
+  .cal-btn:active { background: var(--surface2); }
+  .cal-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .cal-btn.primary:active { background: #d4561a; transform: scale(0.97); }
+
+  /* MEASURE LABELS */
+  .measure-label {
+    font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 700;
+    fill: #ff0000; paint-order: stroke;
+    stroke: white; stroke-width: 3.5px; stroke-linejoin: round;
+  }
+
+  /* SELECT MODE — highlight ring on selected measurement */
+  .measure-selected { filter: drop-shadow(0 0 4px rgba(255,220,0,0.9)); }
+
+  /* COLOR SWATCH ROW - now embedded in submenu */
+  #color-row { display: none !important; }
+  .color-swatch {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 2px solid transparent; cursor: pointer;
+    transition: transform 0.12s, border-color 0.12s;
+    flex-shrink: 0;
+  }
+  .color-swatch.active { border-color: #fff; transform: scale(1.15); }
+  /* Color row inside submenu */
+  .submenu-color-row {
+    display: flex; align-items: center; gap: 7px;
+    padding: 8px 12px; flex-wrap: wrap;
+  }
+  /* Sub-sub menu: color picker panel */
+  .subsub-wrap { position: relative; }
+  .subsub-menu {
+    position: absolute;
+    /* Default (portrait): submenu opens upward, sub-sub opens to the RIGHT */
+    left: calc(100% + 6px);
+    top: 50%; transform: translateY(-50%) scale(0.9);
+    background: rgba(18,18,18,0.99);
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 10px 12px;
+    display: none; flex-direction: column; gap: 8px;
+    z-index: 200;
+    opacity: 0; transition: opacity 0.12s, transform 0.12s;
+    pointer-events: none;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.85);
+    min-width: 130px;
+  }
+  .subsub-menu.open {
+    display: flex; opacity: 1;
+    transform: translateY(-50%) scale(1);
+    pointer-events: auto;
+  }
+  /* Landscape: submenu opens to the LEFT, so sub-sub opens UPWARD above trigger */
+  @media (orientation: landscape) and (max-height: 600px) {
+    .subsub-menu {
+      left: 0; right: 0;
+      top: auto; bottom: calc(100% + 4px);
+      transform: scale(0.9); transform-origin: bottom center;
+    }
+    .subsub-menu.open { transform: scale(1); }
+  }
+  .swatch-grid {
+    display: grid; grid-template-columns: repeat(5, 22px); gap: 6px;
+    align-items: center; justify-items: center;
+  }
+  .subsub-label {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    color: var(--muted); letter-spacing: 0.05em;
+    padding-bottom: 4px; border-bottom: 1px solid var(--border);
+  }
+  .color-indicator {
+    width: 11px; height: 11px; border-radius: 50%;
+    display: inline-block; flex-shrink: 0;
+    border: 1.5px solid rgba(255,255,255,0.25);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.3);
+  }
+
+  /* SHARE TOAST feedback */
+  #share-progress {
+    position: fixed; bottom: calc(var(--bottombar-h) + var(--safe-bottom) + 56px);
+    left: 50%; transform: translateX(-50%) translateY(8px);
+    background: rgba(15,15,15,0.95);
+    border: 1px solid var(--border); border-radius: 20px;
+    padding: 8px 18px;
+    font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    z-index: 201; white-space: nowrap;
+    opacity: 0; transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+  }
+  #share-progress.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* TOPBAR ICON BUTTONS */
+  .topbar-icon-btn {
+    width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent; border: 1px solid var(--border);
+    border-radius: 9px; color: var(--muted);
+    cursor: pointer; transition: all 0.15s; flex-shrink: 0;
+  }
+  .topbar-icon-btn:active { background: var(--surface2); transform: scale(0.93); color: var(--text); }
+  .topbar-danger-btn:active { border-color: rgba(231,76,60,0.4); color: #e74c3c; }
+
+  /* CONFIRM DIALOG */
+  #confirm-dialog {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.65);
+    z-index: 400; display: none; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  }
+  #confirm-dialog.show { display: flex; }
+  #confirm-panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; padding: 28px 24px 20px;
+    max-width: 280px; width: 90%; text-align: center;
+    animation: scaleIn 0.2s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes scaleIn { from { transform: scale(0.85); opacity:0; } to { transform: scale(1); opacity:1; } }
+  #confirm-panel h4 {
+    font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500;
+    color: var(--text); letter-spacing: 0.06em; margin-bottom: 8px;
+  }
+  #confirm-panel p { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 20px; }
+  .confirm-actions { display: flex; gap: 10px; }
+  .confirm-btn {
+    flex: 1; height: 44px; border-radius: 12px;
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
+    cursor: pointer; border: 1.5px solid var(--border);
+    background: transparent; color: var(--muted); transition: all 0.15s;
+  }
+  .confirm-btn:active { background: var(--surface2); }
+  .confirm-btn.danger { background: #c0392b; border-color: #c0392b; color: #fff; }
+  .confirm-btn.danger:active { background: #a93226; transform: scale(0.97); }
+
+  /* DELETE FLOATING BUTTON */
+  #delete-float {
+    position: fixed;
+    z-index: 95;
+    display: none; align-items: center; gap: 6px;
+    height: 32px; padding: 0 12px;
+    background: #c0392b; color: #fff;
+    border: none; border-radius: 16px;
+    font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600;
+    cursor: pointer; white-space: nowrap;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    animation: fadeIn 0.15s ease;
+  }
+  #delete-float.show { display: flex; }
+
+  /* LANDSCAPE: topbar → left sidebar, bottombar → right sidebar */
+  @media (orientation: landscape) and (max-height: 600px) {
+    /* Topbar becomes left sidebar */
+    #topbar {
+      top: 0; left: 0; bottom: 0; right: auto;
+      width: 60px; border-bottom: none; border-right: 1px solid var(--border);
+    }
+    #topbar-inner {
+      height: 100%; flex-direction: column; justify-content: flex-start;
+      align-items: center; padding: 10px 0; gap: 8px; width: 60px;
+    }
+    #brand {
+      font-size: 9px; writing-mode: vertical-rl; text-orientation: mixed;
+      transform: rotate(180deg); flex: 0; letter-spacing: 0.04em;
+    }
+    #open-btn-top {
+      height: 36px; width: 40px; padding: 0;
+      font-size: 0; justify-content: center; border-radius: 10px;
+    }
+    .topbar-icon-btn { width: 36px; height: 36px; }
+
+    /* Bottombar becomes right sidebar */
+    #bottombar {
+      top: 0; bottom: 0; right: 0; left: auto; width: 60px;
+      border-top: none; border-left: 1px solid var(--border); padding-bottom: 0;
+    }
+    #bottombar-inner {
+      height: 100%; flex-direction: column; justify-content: center;
+      padding: 12px 0; gap: 2px;
+    }
+    .bar-btn { max-width: 60px; width: 60px; height: 50px; border-radius: 8px; }
+    .bar-btn span { font-size: 9px; }
+    .bic { width: 30px; height: 30px; border-radius: 8px; }
+
+    /* Canvas fills middle */
+    #canvas-area { top: 0; bottom: 0; left: 60px; right: 60px; }
+    #empty-state  { top: 0; bottom: 0; left: 60px; right: 60px; }
+
+    /* Overlay positions */
+    #page-nav { right: 72px; top: 12px; }
+    #zoom-pill { left: 72px; top: 12px; }
+    #scale-badge { right: 72px; left: auto; top: 12px; }
+    #hint-toast {
+      bottom: 12px; left: 72px; right: 72px;
+      transform: translateY(8px); white-space: normal; text-align: center;
+    }
+    #hint-toast.show { transform: translateY(0); }
+    /* color-row now in submenu */
+    #share-progress { bottom: 52px; left: 72px; right: 72px; }
+  }
+
+  /* color-row now in submenu */
+
+  /* MAGNIFIER */
+  #magnifier {
+    position: fixed;
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    border: 2.5px solid var(--accent);
+    box-shadow: 0 4px 28px rgba(0,0,0,0.7), 0 0 0 1px rgba(232,98,26,0.2);
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 500;
+    display: none;
+    background: #fff;
+  }
+  #magnifier.show { display: block; }
+  #mag-canvas { position: absolute; top: 0; left: 0; image-rendering: pixelated; }
+  #mag-cross-h {
+    position: absolute; top: 50%; left: 0; right: 0;
+    height: 1px; background: rgba(255,0,0,0.65);
+    transform: translateY(-0.5px); pointer-events: none; z-index: 2;
+  }
+  #mag-cross-v {
+    position: absolute; left: 50%; top: 0; bottom: 0;
+    width: 1px; background: rgba(255,0,0,0.65);
+    transform: translateX(-0.5px); pointer-events: none; z-index: 2;
+  }
+  #mag-dot {
+    position: absolute; top: 50%; left: 50%;
+    width: 5px; height: 5px; border-radius: 50%;
+    background: #ff0000; opacity: 0.9;
+    transform: translate(-50%,-50%);
+    pointer-events: none; z-index: 3;
+  }
+
+  /* INSTALL BANNER */
+  #install-banner {
+    position: fixed;
+    top: calc(var(--toolbar-h) + var(--safe-top) + 8px);
+    left: 12px; right: 12px;
+    background: var(--surface2);
+    border: 1px solid rgba(232,98,26,0.4);
+    border-radius: 14px; padding: 12px 14px;
+    display: none; align-items: center; gap: 12px;
+    z-index: 95; animation: fadeIn 0.3s ease;
+  }
+  #install-banner.show { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+  #install-banner p { flex: 1; font-size: 12px; color: var(--muted); line-height: 1.4; }
+  #install-banner p strong { color: var(--text); display: block; font-size: 13px; margin-bottom: 2px; }
+  #install-now { height: 32px; padding: 0 14px; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  #install-dismiss { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; background: transparent; border: none; color: var(--muted); cursor: pointer; border-radius: 6px; }
+  #install-dismiss:active { background: var(--surface); }
+
+  #file-input { display: none; }
+
+  /* SUB-MENUS attached to buttons */
+  .submenu-wrap {
+    position: relative;
+    display: flex; flex-direction: column;
+    align-items: center;
+  }
+  .submenu {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%; transform: translateX(-50%) scale(0.92);
+    background: rgba(22,22,22,0.97);
+    border: 1px solid var(--border); border-radius: 14px;
+    padding: 6px;
+    display: none; flex-direction: column; gap: 2px;
+    min-width: 140px;
+    z-index: 150;
+    opacity: 0;
+    transition: opacity 0.15s, transform 0.15s;
+    pointer-events: none;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  }
+  .submenu.open {
+    display: flex; opacity: 1;
+    transform: translateX(-50%) scale(1);
+    pointer-events: auto;
+  }
+  .submenu-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: 10px;
+    cursor: pointer; color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 500;
+    transition: background 0.12s, color 0.12s;
+    white-space: nowrap;
+  }
+  .submenu-item:hover, .submenu-item:active { background: var(--surface2); color: var(--text); }
+  .submenu-item.active { color: var(--accent); }
+  .submenu-item svg { flex-shrink: 0; }
+  .submenu-divider { height: 1px; background: var(--border); margin: 2px 0; }
+  
+  /* Sub-sub menu (color picker) */
+  .subsub-wrap { position: relative; }
+  .subsub-menu {
+    position: absolute;
+    left: calc(100% + 4px); top: 0;
+    background: rgba(22,22,22,0.97);
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 8px;
+    display: none; flex-direction: column;
+    min-width: 160px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+    z-index: 160;
+  }
+  .subsub-wrap:hover .subsub-menu,
+  .subsub-wrap.open .subsub-menu { display: flex; }
+  .subsub-label {
+    font-size: 10px; font-weight: 600;
+    color: var(--muted); letter-spacing: 0.08em;
+    margin-bottom: 6px; padding: 0 4px;
+  }
+  .swatch-grid {
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+  .color-swatch {
+    width: 24px; height: 24px;
+    border-radius: 6px;
+    border: 1.5px solid var(--border);
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .color-swatch:active { transform: scale(0.9); }
+  .color-swatch.active { border-color: var(--accent); border-width: 2px; }
+  .color-indicator {
+    width: 16px; height: 16px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    display: inline-block;
+    margin-right: 4px;
+  }
+  
+  /* landscape: open sub-menu to the right, vertically centered */
+  @media (orientation: landscape) and (max-height: 600px) {
+    .submenu {
+      bottom: auto; top: 50%;
+      left: auto; right: calc(100% + 8px);
+      transform: translateY(-50%) scale(0.92);
+    }
+    .submenu.open { transform: translateY(-50%) scale(1); }
+  }
+
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div id="topbar-inner">
+    <div id="brand">
+      <div id="brand-logo">
+        <svg viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 17L17 3"/><circle cx="3" cy="17" r="1.5" fill="#fff" stroke="none"/><circle cx="17" cy="3" r="1.5" fill="#fff" stroke="none"/>
+        </svg>
+      </div>
+      <span id="brand-text">Modern <em>Measure</em></span>
+    </div>
+
+    <div id="session-dropdown">
+      <button id="session-trigger">
+        <span id="session-trigger-text">Sessions</span>
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+          <path d="M2 4l3 3 3-3"/>
+        </svg>
+      </button>
+      <div id="session-menu"></div>
+    </div>
+
+    <button id="share-btn" class="topbar-icon-btn" title="Share / Save image">
+      <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 3v10M6 7l4-4 4 4M4 14v3h12v-3"/>
+      </svg>
+    </button>
+    <button id="clear-btn" class="topbar-icon-btn topbar-danger-btn" title="Clear all">
+      <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 5h14M7.5 5V3.5h5V5M7.5 9v6.5M12.5 9v6.5M4 5l1.5 12h9L16 5"/>
+      </svg>
+    </button>
+    <label id="open-btn-top">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 2h6l4 4v9H3V2z"/><path d="M9 2v4h4"/></svg>
+      Open PDF
+      <input type="file" id="file-input" accept=".pdf">
+    </label>
+  </div>
+</div>
+
+<!-- INSTALL BANNER -->
+<div id="install-banner">
+  <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="8" fill="#ff0000" opacity="0.15"/><path d="M14 8v8M10 13l4 4 4-4M9 18h10" stroke="#ff0000" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <p><strong>Install MeasurePDF</strong>Add to your home screen for the full app experience</p>
+  <button id="install-now">Install</button>
+  <button id="install-dismiss">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 2l8 8M10 2l-8 8"/></svg>
+  </button>
+</div>
+
+<!-- EMPTY STATE -->
+<div id="empty-state">
+  <div class="empty-icon">
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="#ff0000" stroke-width="1.5" stroke-linecap="round">
+      <path d="M8 4h9l7 7v17H8V4z"/><path d="M17 4v7h7"/>
+      <path d="M11 16h10M11 20h10M11 24h6"/>
+    </svg>
+  </div>
+  <h2>NO PDF LOADED</h2>
+  <p>Open a PDF to start taking measurements with calibrated scale.</p>
+  <label id="open-btn-empty">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 2h6l4 4v9H3V2z"/><path d="M9 2v4h4"/></svg>
+    Open PDF
+    <input type="file" style="display:none" accept=".pdf" id="file-input-empty">
+  </label>
+  
+  <!-- SESSION LIST -->
+  <div id="session-list"></div>
+</div>
+
+<!-- CANVAS AREA -->
+<div id="canvas-area">
+  <div id="canvas-viewport">
+    <div id="canvas-wrap">
+      <canvas id="pdf-canvas"></canvas>
+      <svg id="svg-overlay"></svg>
+      <div id="touch-layer"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE NAV -->
+<div id="page-nav">
+  <button class="pnav-btn" id="prev-btn">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7.5 2L4.5 6l3 4"/></svg>
+  </button>
+  <div id="page-pill">1/1</div>
+  <button class="pnav-btn" id="next-btn">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4.5 2L7.5 6l-3 4"/></svg>
+  </button>
+</div>
+
+<!-- ZOOM PILL -->
+<div id="zoom-pill">100%</div>
+
+<!-- SCALE OVERLAY -->
+<div id="scale-badge">
+  <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="4.5"/><path d="M6 4v2l1.5 1.5" stroke-linecap="round"/></svg>
+  <span id="scale-text"></span>
+</div>
+
+<!-- HINT TOAST -->
+<div id="hint-toast"></div>
+
+<!-- BOTTOM BAR -->
+<div id="bottombar">
+  <div id="bottombar-inner">
+    <button class="bar-btn" id="undo-btn">
+      <div class="bic">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 9A6.5 6.5 0 0 1 15.5 12"/><path d="M4 4.5V9H8.5"/>
+        </svg>
+      </div>
+      <span>Undo</span>
+    </button>
+    <button class="bar-btn" id="select-btn">
+      <div class="bic">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 3l12 8-7 1.5L7.5 17z"/>
+        </svg>
+      </div>
+      <span>Select</span>
+    </button>
+    <div class="submenu-wrap">
+      <button class="bar-btn" id="measure-btn">
+        <div class="bic">
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="9" width="16" height="6" rx="1.2" transform="rotate(-45 10 12)" stroke="currentColor" fill="none" stroke-width="1.5"/>
+            <line x1="6.5" y1="8" x2="8" y2="9.5" stroke-width="1.4"/>
+            <line x1="9.5" y1="5" x2="11" y2="6.5" stroke-width="1.4"/>
+            <line x1="12.5" y1="2" x2="14" y2="3.5" stroke-width="1.4"/>
+          </svg>
+        </div>
+        <span>Measure</span>
+      </button>
+      <div class="submenu" id="measure-submenu">
+        <div class="submenu-item active" id="sub-measure" data-mode="measure">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <line x1="3" y1="17" x2="17" y2="3"/><circle cx="3" cy="17" r="1.5" fill="currentColor" stroke="none"/><circle cx="17" cy="3" r="1.5" fill="currentColor" stroke="none"/>
+          </svg>
+          Line measure
+        </div>
+        <div class="submenu-divider"></div>
+        <div class="submenu-item" id="sub-area" data-mode="area">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="3,16 10,3 17,16"/>
+          </svg>
+          Area measure
+        </div>
+        <div class="submenu-divider"></div>
+        <div class="submenu-item" id="sub-boxmeasure" data-mode="boxmeasure">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="14" height="14" rx="1"/>
+            <line x1="3" y1="10" x2="17" y2="10" stroke-dasharray="2,2"/>
+            <line x1="10" y1="3" x2="10" y2="17" stroke-dasharray="2,2"/>
+          </svg>
+          Box measure
+        </div>
+      </div>
+    </div>
+    <div class="submenu-wrap">
+      <button class="bar-btn" id="draw-btn">
+        <div class="bic">
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <line x1="4" y1="16" x2="16" y2="4"/>
+            <circle cx="4" cy="16" r="1.8" fill="currentColor" stroke="none"/>
+            <circle cx="16" cy="4" r="1.8" fill="currentColor" stroke="none"/>
+          </svg>
+        </div>
+        <span>Line</span>
+      </button>
+      <div class="submenu" id="draw-submenu">
+        <div class="submenu-item active" id="sub-line" data-mode="draw">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <line x1="4" y1="16" x2="16" y2="4"/>
+            <circle cx="4" cy="16" r="1.5" fill="currentColor" stroke="none"/>
+            <circle cx="16" cy="4" r="1.5" fill="currentColor" stroke="none"/>
+          </svg>
+          Line
+        </div>
+        <div class="submenu-divider"></div>
+        <div class="submenu-item" id="sub-box" data-mode="boxanno">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="14" height="14" rx="1.5"/>
+          </svg>
+          Box
+        </div>
+        <div class="submenu-divider"></div>
+        <div class="submenu-item" id="sub-circle" data-mode="circleanno">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="10" cy="10" r="7"/>
+          </svg>
+          Circle
+        </div>
+        <div class="submenu-divider"></div>
+        <div class="submenu-item" id="sub-text" data-mode="textanno">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <path d="M4 5h12M10 5v11M7 16h6"/>
+          </svg>
+          Text
+        </div>
+        <div class="submenu-divider"></div>
+        <div class="submenu-item" id="sub-cloud" data-mode="cloudanno">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 13a3 3 0 01-.5-5.95A4 4 0 0114.5 9H15a3 3 0 010 6H5z"/>
+          </svg>
+          Cloud
+        </div>
+        <div class="submenu-divider"></div>
+        <div class="subsub-wrap">
+          <div class="submenu-item" id="sub-color-trigger">
+            <span class="color-indicator" id="color-indicator" style="background:#0088ff"></span>
+            Color
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="margin-left:auto;opacity:0.5"><path d="M3.5 2L6.5 5l-3 3"/></svg>
+          </div>
+          <div class="subsub-menu" id="color-subsub">
+            <div class="subsub-label">COLOR</div>
+            <div class="swatch-grid" id="submenu-color-row">
+              <div class="color-swatch" data-color="#ff0000" style="background:#ff0000"></div>
+              <div class="color-swatch" data-color="#ff6600" style="background:#ff6600"></div>
+              <div class="color-swatch" data-color="#ffcc00" style="background:#ffcc00"></div>
+              <div class="color-swatch" data-color="#00cc44" style="background:#00cc44"></div>
+              <div class="color-swatch" data-color="#0088ff" style="background:#0088ff"></div>
+              <div class="color-swatch" data-color="#aa44ff" style="background:#aa44ff"></div>
+              <div class="color-swatch" data-color="#cc3399" style="background:#cc3399"></div>
+              <div class="color-swatch" data-color="#ff4444" style="background:#ff4444"></div>
+              <div class="color-swatch" data-color="#333333" style="background:#333333"></div>
+              <div class="color-swatch active" data-color="#ffffff" style="background:#fff;border-color:#666"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button class="bar-btn" id="calibrate-btn">
+      <div class="bic">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <circle cx="10" cy="10" r="6.5"/>
+          <path d="M10 6.5V10l2.5 2.5"/>
+          <path d="M10 3v1.5M10 15.5V17M3 10h1.5M15.5 10H17"/>
+        </svg>
+      </div>
+      <span>Calibrate</span>
+    </button>
+
+  </div>
+</div>
+
+<!-- color-row now embedded in draw-submenu -->
+
+<!-- SHARE PROGRESS -->
+<div id="share-progress"></div>
+
+<!-- CONFIRM CLEAR DIALOG -->
+<div id="confirm-dialog">
+  <div id="confirm-panel">
+    <h4>CLEAR ALL?</h4>
+    <p>This will remove all measurements and annotation lines.</p>
+    <div class="confirm-actions">
+      <button class="confirm-btn" id="confirm-no">Cancel</button>
+      <button class="confirm-btn danger" id="confirm-yes">Clear All</button>
+    </div>
+  </div>
+</div>
+
+<!-- SWAP AXIS FLOAT BUTTON (box measure only) -->
+<button id="swap-float">
+  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 5h12M10 2l4 3-4 3M14 11H2M6 8l-4 3 4 3"/>
+  </svg>
+  Swap
+</button>
+
+<!-- DELETE FLOAT BUTTON -->
+<button id="delete-float">
+  <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M1 3.5h12M5 3.5V2h4v1.5M5.5 6v5M8.5 6v5M2 3.5l1 9h8l1-9"/></svg>
+  Delete
+</button>
+
+<!-- CALIBRATE BOTTOM SHEET -->
+<div id="cal-sheet">
+  <div id="cal-panel">
+    <div class="sheet-handle"></div>
+    <h3>CALIBRATE SCALE</h3>
+    <p>Draw a line over a known dimension, then enter its real-world length below.</p>
+    <div id="cal-info-box">Tap Calibrate, then draw a line on the PDF first</div>
+    <div class="cal-input-row">
+      <input class="cal-input" id="cal-value" type="number" step="any" inputmode="decimal" placeholder="Length" min="0.001">
+      <select class="cal-select" id="cal-unit">
+        <option value="mm">mm</option>
+        <option value="cm">cm</option>
+        <option value="m">m</option>
+        <option value="in">in</option>
+        <option value="ft">ft</option>
+        <option value="yd">yd</option>
+      </select>
+    </div>
+    <div class="cal-actions">
+      <button class="cal-btn" id="cal-cancel">Cancel</button>
+      <button class="cal-btn primary" id="cal-confirm">Set Scale</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAGNIFIER -->
+<div id="magnifier">
+  <canvas id="mag-canvas" width="100" height="100"></canvas>
+  <div id="mag-cross-h"></div>
+  <div id="mag-cross-v"></div>
+  <div id="mag-dot"></div>
+</div>
+
+<script>
+// ── PDF.JS ──
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ── INLINE SERVICE WORKER ──
+const swCode = `
+const CACHE='mpdf-v2';
+self.addEventListener('install',e=>{ self.skipWaiting(); });
+self.addEventListener('activate',e=>{ e.waitUntil(self.clients.claim()); });
+self.addEventListener('fetch',e=>{
+  e.respondWith(caches.match(e.request).then(c=>{
+    if(c) return c;
+    return fetch(e.request).then(r=>{
+      if(r&&r.status===200&&r.type!=='opaque'){
+        const cl=r.clone();
+        caches.open(CACHE).then(cache=>cache.put(e.request,cl));
+      }
+      return r;
+    }).catch(()=>c);
+  }));
+});`;
+if ('serviceWorker' in navigator) {
+  const blob = new Blob([swCode], { type: 'application/javascript' });
+  navigator.serviceWorker.register(URL.createObjectURL(blob), { scope: './' }).catch(()=>{});
+}
+
+// ── INLINE MANIFEST ──
+const manifestData = {
+  name:"MeasurePDF", short_name:"MeasurePDF",
+  start_url:"./", display:"standalone", orientation:"any",
+  background_color:"#0f0f0f", theme_color:"#0f0f0f",
+  icons:[{ src:`data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="32" fill="#0f0f0f"/><rect x="52" y="28" width="88" height="108" rx="6" fill="none" stroke="#ff0000" stroke-width="6"/><path d="M68 76h56M68 94h56M68 112h32" stroke="#ff0000" stroke-width="5" stroke-linecap="round"/><circle cx="60" cy="148" r="8" fill="#ff0000"/><circle cx="132" cy="148" r="8" fill="#ff0000"/><line x1="68" y1="148" x2="124" y2="148" stroke="#ff0000" stroke-width="4"/></svg>')}`, sizes:"192x192", type:"image/svg+xml", purpose:"any maskable" }]
+};
+const mBlob = new Blob([JSON.stringify(manifestData)], { type:'application/manifest+json' });
+const mLink = document.createElement('link');
+mLink.rel='manifest'; mLink.href=URL.createObjectURL(mBlob);
+document.head.appendChild(mLink);
+
+// ── STATE ──
+let pdfDoc=null, currentPage=1, totalPages=1;
+const renderScale=2.0;
+let mode=null;         // 'measure'|'calibrate'|'draw'|'select'|'area'|'boxmeasure'|'boxanno'|'circleanno'|'textanno'|'cloudanno'
+let drawState=null;    // { x, y } canvas coords of point 1
+let measurements=[], calibration=null, calLine=null;
+let annotations=[];    // { type:'line'|'box'|'area', ... } — plain annotations
+let selectedItem=null; // { type:'measurement'|'annotation', index:number } | null
+let drawColor='#0088ff';
+let drawSubMode='draw';    // current draw sub-mode: 'draw'|'boxanno'
+let measureSubMode='measure'; // current measure sub-mode: 'measure'|'area'|'boxmeasure'
+let areaPts=[];        // polygon points for area mode [{x,y},…]
+
+// Pan/zoom
+let panX=0, panY=0, zoom=1.0;
+const minZoom=0.2, maxZoom=6.0;
+let activePointers={};
+let gestureState=null;
+let pinchEndTime=0;
+let zoomTimer=null, deferredInstall=null;
+
+// ── ELEMENTS ──
+const fileInput       = document.getElementById('file-input');
+const fileInputEmpty  = document.getElementById('file-input-empty');
+const emptyState      = document.getElementById('empty-state');
+const canvasArea      = document.getElementById('canvas-area');
+const pdfCanvas       = document.getElementById('pdf-canvas');
+const svgOverlay      = document.getElementById('svg-overlay');
+const touchLayer      = document.getElementById('touch-layer');
+const canvasWrap      = document.getElementById('canvas-wrap');
+const canvasViewport  = document.getElementById('canvas-viewport');
+const measureBtn      = document.getElementById('measure-btn');
+const calibrateBtn    = document.getElementById('calibrate-btn');
+const drawBtn         = document.getElementById('draw-btn');
+const selectBtn       = document.getElementById('select-btn');
+const shareBtn        = document.getElementById('share-btn');
+const undoBtn         = document.getElementById('undo-btn');
+const clearBtn        = document.getElementById('clear-btn');
+const colorRow        = document.getElementById('color-row');
+const shareProgress   = document.getElementById('share-progress');
+const deleteFloat     = document.getElementById('delete-float');
+const scaleBadge      = document.getElementById('scale-badge');
+const scaleText       = document.getElementById('scale-text');
+const hintToast       = document.getElementById('hint-toast');
+const calSheet        = document.getElementById('cal-sheet');
+const calInfoBox      = document.getElementById('cal-info-box');
+const calValue        = document.getElementById('cal-value');
+const calUnit         = document.getElementById('cal-unit');
+const calConfirm      = document.getElementById('cal-confirm');
+const calCancel       = document.getElementById('cal-cancel');
+const pageNav         = document.getElementById('page-nav');
+const pagePill        = document.getElementById('page-pill');
+const prevBtn         = document.getElementById('prev-btn');
+const nextBtn         = document.getElementById('next-btn');
+const zoomPill        = document.getElementById('zoom-pill');
+const installBanner   = document.getElementById('install-banner');
+const installNow      = document.getElementById('install-now');
+const installDismiss  = document.getElementById('install-dismiss');
+const magnifier       = document.getElementById('magnifier');
+const magCanvas       = document.getElementById('mag-canvas');
+const magCtx          = magCanvas.getContext('2d');
+
+// ── PWA INSTALL ──
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); deferredInstall=e; installBanner.classList.add('show');
+});
+installNow.onclick = () => { if(deferredInstall){deferredInstall.prompt();deferredInstall=null;} installBanner.classList.remove('show'); };
+installDismiss.onclick = () => installBanner.classList.remove('show');
+window.addEventListener('appinstalled', () => installBanner.classList.remove('show'));
+
+// ── PDF LOADING ──
+function loadPDF(file) {
+  currentFilename=file.name; // capture filename
+  const reader = new FileReader();
+  reader.onload = e => {
+    pdfjsLib.getDocument({ data: new Uint8Array(e.target.result) }).promise.then(doc => {
+      pdfDoc=doc; totalPages=doc.numPages; currentPage=1;
+      measurements=[]; annotations=[]; calibration=null; calLine=null; selectedItem=null;
+      scaleBadge.classList.remove('visible');
+      emptyState.style.display='none';
+      canvasArea.style.display='block';
+      if(doc.numPages>1) pageNav.classList.add('show');
+      updatePageNav();
+      renderPage(currentPage, true);
+    }).catch(()=>showToast('Could not open PDF'));
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function renderPage(num, reset=false) {
+  pdfDoc.getPage(num).then(page => {
+    const vp = page.getViewport({ scale: renderScale });
+    pdfCanvas.width=vp.width; pdfCanvas.height=vp.height;
+    svgOverlay.setAttribute('width', vp.width);
+    svgOverlay.setAttribute('height', vp.height);
+    touchLayer.style.width=vp.width+'px';
+    touchLayer.style.height=vp.height+'px';
+    page.render({ canvasContext: pdfCanvas.getContext('2d'), viewport: vp }).promise.then(() => {
+      if (reset) {
+        fitToScreen();
+        // Try to restore session for this filename
+        loadSession(currentFilename);
+      }
+      redrawOverlay();
+      pagePill.textContent=`${num}/${totalPages}`;
+    });
+  });
+}
+
+function fitToScreen() {
+  const vw=canvasViewport.clientWidth, vh=canvasViewport.clientHeight;
+  const cw=pdfCanvas.width, ch=pdfCanvas.height;
+  zoom=Math.max(minZoom,Math.min(maxZoom,Math.min((vw-32)/cw,(vh-32)/ch)));
+  panX=(vw-cw*zoom)/2; panY=Math.max(16,(vh-ch*zoom)/2);
+  applyTransform();
+}
+
+function applyTransform() {
+  canvasWrap.style.transform=`translate(${panX}px,${panY}px) scale(${zoom})`;
+  zoomPill.textContent=Math.round(zoom*100)+'%';
+  zoomPill.classList.add('show');
+  clearTimeout(zoomTimer);
+  zoomTimer=setTimeout(()=>zoomPill.classList.remove('show'),1500);
+}
+
+function screenToCanvas(sx,sy) {
+  const r=canvasViewport.getBoundingClientRect();
+  return { x:(sx-r.left-panX)/zoom, y:(sy-r.top-panY)/zoom };
+}
+
+// ── ANGLE SNAPPING ──
+function snapTo90(x1,y1,x2,y2) {
+  const dx=x2-x1, dy=y2-y1;
+  const angle=Math.atan2(dy,dx);
+  const deg=angle*180/Math.PI;
+  // Snap to nearest 90° if within 15° tolerance
+  const snapAngles=[0, 90, 180, -90]; // horizontal, vertical, horizontal-left, vertical-down
+  for (const snap of snapAngles) {
+    const diff=Math.abs(deg-snap);
+    if (diff<15 || diff>345) {
+      const snapRad=snap*Math.PI/180;
+      const dist=Math.hypot(dx,dy);
+      return { x:x1+Math.cos(snapRad)*dist, y:y1+Math.sin(snapRad)*dist };
+    }
+  }
+  return {x:x2,y:y2}; // no snap
+}
+
+// ── LOCALSTORAGE PERSISTENCE ──
+let currentFilename='';
+
+function saveSession() {
+  if (!pdfDoc || !currentFilename) return;
+  const session={
+    filename:currentFilename,
+    measurements, annotations, calibration,
+    currentPage, totalPages,
+    timestamp:Date.now()
+  };
+  // Save this PDF's session
+  localStorage.setItem(`mpdf-${currentFilename}`, JSON.stringify(session));
+  // Update session index
+  updateSessionIndex();
+}
+
+function loadSession(filename) {
+  try {
+    const data=localStorage.getItem(`mpdf-${filename}`);
+    if (!data) return false;
+    const session=JSON.parse(data);
+    // Only restore if less than 30 days old
+    if (Date.now()-session.timestamp>30*24*60*60*1000) {
+      localStorage.removeItem(`mpdf-${filename}`);
+      updateSessionIndex();
+      return false;
+    }
+    measurements=session.measurements||[]; annotations=session.annotations||[];
+    calibration=session.calibration||null;
+    if (calibration) {
+      scaleText.textContent=`1${calibration.unit}≈${Math.round(calibration.pixelsPerUnit)}px`;
+      scaleBadge.classList.add('visible');
+    }
+    updateLabels();
+    redrawOverlay();
+    showToast('Session restored');
+    return true;
+  } catch(e) { return false; }
+}
+
+function updateSessionIndex() {
+  // Build index of all saved sessions
+  const sessions=[];
+  for (let i=0; i<localStorage.length; i++) {
+    const key=localStorage.key(i);
+    if (key.startsWith('mpdf-') && key!=='mpdf-index') {
+      try {
+        const data=JSON.parse(localStorage.getItem(key));
+        if (data && data.filename) sessions.push(data);
+      } catch(e) {}
+    }
+  }
+  // Sort by timestamp desc
+  sessions.sort((a,b)=>b.timestamp-a.timestamp);
+  localStorage.setItem('mpdf-index', JSON.stringify(sessions.slice(0,20))); // keep last 20
+  renderSessionList();
+}
+
+function renderSessionList() {
+  const sessionList=document.getElementById('session-list');
+  try {
+    const index=JSON.parse(localStorage.getItem('mpdf-index')||'[]');
+    if (index.length===0) {
+      sessionList.classList.remove('show');
+      return;
+    }
+    sessionList.innerHTML='';
+    sessionList.classList.add('show');
+    
+    index.forEach(session=>{
+      const item=document.createElement('div');
+      item.className='session-item';
+      item.innerHTML=`
+        <div class="session-icon">
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="#ff0000" stroke-width="1.2">
+            <path d="M3 2h6l4 4v9H3V2z"/><path d="M9 2v4h4"/>
+          </svg>
+        </div>
+        <div class="session-info">
+          <div class="session-name">${session.filename}</div>
+          <div class="session-meta">${session.measurements?.length||0} measurements · ${new Date(session.timestamp).toLocaleDateString()}</div>
+        </div>
+        <button class="session-delete" onclick="deleteSession('${session.filename}',event)">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M2 2l10 10M12 2L2 12"/>
+          </svg>
+        </button>
+      `;
+      item.onclick=(e)=>{
+        if (e.target.closest('.session-delete')) return;
+        // Can't reload PDF directly, just show toast
+        showToast(`Open "${session.filename}" to restore this session`);
+      };
+      sessionList.appendChild(item);
+    });
+  } catch(e) { sessionList.classList.remove('show'); }
+}
+
+function deleteSession(filename,event) {
+  event?.stopPropagation();
+  localStorage.removeItem(`mpdf-${filename}`);
+  updateSessionIndex();
+  showToast('Session deleted');
+}
+
+// Auto-save on every change
+function autoSave() {
+  if (pdfDoc && currentFilename) saveSession();
+}
+
+// Render session list on page load
+renderSessionList();
+
+// ── MAGNIFIER ──
+const MAG_SIZE=100, MAG_CAPTURE=25;
+
+function showMagnifier(sx, sy) {
+  if (!pdfDoc) return;
+  const r=canvasViewport.getBoundingClientRect();
+  const cx=(sx-r.left-panX)/zoom, cy=(sy-r.top-panY)/zoom;
+  magCtx.clearRect(0,0,MAG_SIZE,MAG_SIZE);
+  magCtx.fillStyle='#fff'; magCtx.fillRect(0,0,MAG_SIZE,MAG_SIZE);
+  magCtx.save();
+  magCtx.beginPath(); magCtx.arc(MAG_SIZE/2,MAG_SIZE/2,MAG_SIZE/2,0,Math.PI*2); magCtx.clip();
+  magCtx.drawImage(pdfCanvas, cx-MAG_CAPTURE, cy-MAG_CAPTURE, MAG_CAPTURE*2, MAG_CAPTURE*2, 0, 0, MAG_SIZE, MAG_SIZE);
+  magCtx.restore();
+  let mx=sx-MAG_SIZE/2, my=sy-MAG_SIZE-30;
+  mx=Math.max(8,Math.min(window.innerWidth-MAG_SIZE-8,mx));
+  my=Math.max(8,Math.min(window.innerHeight-MAG_SIZE-8,my));
+  magnifier.style.left=mx+'px'; magnifier.style.top=my+'px';
+  magnifier.classList.add('show');
+}
+
+function hideMagnifier() { magnifier.classList.remove('show'); }
+
+// ════════════════════════════════════════════════════
+// GESTURE SYSTEM — clean & simple
+//
+// MEASURE / CALIBRATE mode (single finger):
+//   pointerdown  → set point 1, show magnifier
+//   pointermove  → update ghost line, update magnifier
+//   pointerup    → set point 2, commit measurement
+//
+// TWO fingers → pan + pinch-zoom simultaneously
+// ════════════════════════════════════════════════════
+
+function getIds() { return Object.keys(activePointers).sort(); }
+
+function startMulti() {
+  const ids=getIds();
+  const p0=activePointers[ids[0]], p1=activePointers[ids[1]];
+  gestureState={
+    type:'multi',
+    startZoom:zoom, startPanX:panX, startPanY:panY,
+    startDist:Math.hypot(p1.x-p0.x,p1.y-p0.y),
+    startMidX:(p0.x+p1.x)/2, startMidY:(p0.y+p1.y)/2
+  };
+  // Abort any in-flight draw
+  drawState=null; hideMagnifier(); redrawOverlay();
+}
+
+let dragTimer=null, dragActive=false, p1Waiting=false;
+
+function clearDragTimer() {
+  if (dragTimer) { clearTimeout(dragTimer); dragTimer=null; }
+}
+
+touchLayer.addEventListener('pointerdown', e=>{
+  e.preventDefault();
+  touchLayer.setPointerCapture(e.pointerId);
+  activePointers[e.pointerId]={ x:e.clientX, y:e.clientY };
+
+  if (Object.keys(activePointers).length>=2) {
+    // Second finger — go to pan/zoom, cancel draw
+    clearDragTimer(); dragActive=false;
+    drawState=null; hideMagnifier(); redrawOverlay();
+    startMulti(); return;
+  }
+
+  // Single finger in draw/measure mode
+  if (mode && mode!=='select' && pdfDoc) {
+    // Area mode: taps handled in pointerup, no drag timer needed
+    if (mode==='area') return;
+
+    if (p1Waiting && drawState) {
+      // Point 1 already set — this touch sets/adjusts from p1; activate drag immediately
+      dragActive=true;
+      showMagnifier(e.clientX, e.clientY);
+    } else {
+      // Fresh: record point 1, show p1 dot, wait for drag or second tap
+      const p=screenToCanvas(e.clientX,e.clientY);
+      drawState={ x:p.x, y:p.y };
+      p1Waiting=false; dragActive=false;
+      redrawOverlay(); // shows the p1 dot
+
+      // After 600ms hold, activate drag mode (magnifier + ghost on move)
+      dragTimer=setTimeout(()=>{
+        dragActive=true;
+        showMagnifier(activePointers[e.pointerId]?.x ?? e.clientX,
+                      activePointers[e.pointerId]?.y ?? e.clientY);
+      }, 600);
+    }
+  }
+},{passive:false});
+
+touchLayer.addEventListener('pointermove', e=>{
+  e.preventDefault();
+  if (!activePointers[e.pointerId]) return;
+  activePointers[e.pointerId].x=e.clientX;
+  activePointers[e.pointerId].y=e.clientY;
+
+  const count=Object.keys(activePointers).length;
+
+  // ── TWO FINGERS: pan + zoom ──
+  if (count>=2 && gestureState?.type==='multi') {
+    const ids=getIds(), gs=gestureState;
+    const p0=activePointers[ids[0]], p1=activePointers[ids[1]];
+    const midX=(p0.x+p1.x)/2, midY=(p0.y+p1.y)/2;
+    const dist=Math.hypot(p1.x-p0.x,p1.y-p0.y);
+    const nz=Math.max(minZoom,Math.min(maxZoom,gs.startZoom*(gs.startDist>0?dist/gs.startDist:1)));
+    const r=canvasViewport.getBoundingClientRect();
+    const ax=gs.startMidX-r.left, ay=gs.startMidY-r.top;
+    panX=ax-(ax-gs.startPanX)*(nz/gs.startZoom)+(midX-gs.startMidX);
+    panY=ay-(ay-gs.startPanY)*(nz/gs.startZoom)+(midY-gs.startMidY);
+    zoom=nz; applyTransform();
+    return;
+  }
+
+  // ── ONE FINGER: ghost + magnifier ──
+  if (count===1 && mode && mode!=='select' && mode!=='area' && pdfDoc && drawState) {
+    // In p1Waiting state, any move activates ghost immediately
+    if (p1Waiting && !dragActive) {
+      clearDragTimer(); dragActive=true;
+    }
+    if (dragActive) {
+      let p=screenToCanvas(e.clientX,e.clientY);
+      if (mode==='boxmeasure'||mode==='boxanno') {
+        // No angle snap for box modes
+      } else {
+        const snapped=snapTo90(drawState.x,drawState.y,p.x,p.y);
+        p={x:snapped.x,y:snapped.y};
+      }
+      redrawOverlay();
+      drawGhost(drawState.x,drawState.y,p.x,p.y);
+      showMagnifier(e.clientX,e.clientY);
+    }
+  }
+  // Area mode: show live edge from last point to cursor
+  if (count===1 && mode==='area' && pdfDoc && areaPts.length>0) {
+    const p=screenToCanvas(e.clientX,e.clientY);
+    redrawOverlay();
+    // ghost edge to cursor
+    const last=areaPts[areaPts.length-1];
+    drawLine(last.x,last.y,p.x,p.y,'#ff0000','1.5','4,3',null);
+  }
+},{passive:false});
+
+touchLayer.addEventListener('pointerup', e=>{
+  clearDragTimer();
+  const wasDragActive=dragActive;
+  dragActive=false;
+
+  const ptr=activePointers[e.pointerId];
+  delete activePointers[e.pointerId];
+  const remaining=Object.keys(activePointers).length;
+  hideMagnifier();
+
+  // Multi-gesture ended
+  if (gestureState?.type==='multi') {
+    if (remaining<2) { pinchEndTime=Date.now(); gestureState=null; }
+    else startMulti();
+    return;
+  }
+  if (remaining===0) gestureState=null;
+
+  // Post-pinch guard
+  if (Date.now()-pinchEndTime<400) return;
+  if (!mode || !pdfDoc) return;
+
+  // Fast tap (lifted before drag activated)
+  if (!wasDragActive) {
+    if (mode==='select' && ptr) {
+      drawState=null; p1Waiting=false;
+      const cp=screenToCanvas(ptr.x,ptr.y);
+      handleSelectTap(cp.x,cp.y);
+      redrawOverlay();
+      return;
+    }
+    // Text annotation: tap to place
+    if (mode==='textanno' && ptr && pdfDoc) {
+      const cp=screenToCanvas(ptr.x,ptr.y);
+      // Show a native prompt for text input
+      const txt=window.prompt('Enter annotation text:');
+      if(txt&&txt.trim()) {
+        annotations.push({type:'text',x:cp.x,y:cp.y,text:txt.trim(),color:drawColor});
+        redrawOverlay(); autoSave();
+        showToast('Text placed');
+      }
+      return;
+    }
+    // Area mode: each tap adds a vertex; tap near start closes polygon
+    if (mode==='area' && ptr && pdfDoc) {
+      const cp=screenToCanvas(ptr.x,ptr.y);
+      if (areaPts.length>=3) {
+        const first=areaPts[0];
+        const closeDist=Math.hypot(cp.x-first.x,cp.y-first.y);
+        if (closeDist < 40/zoom) {
+          commitArea(); return;
+        }
+      }
+      areaPts.push({x:cp.x,y:cp.y});
+      redrawOverlay();
+      if(areaPts.length===1) showToast('Keep tapping to add points · tap near start to close');
+      return;
+    }
+    if (mode && mode!=='select' && mode!=='area' && pdfDoc && drawState) {
+      if (!p1Waiting) {
+        p1Waiting=true;
+        showToast('Point 1 set — tap or drag to set point 2');
+        redrawOverlay();
+        return;
+      } else {
+        // Second tap: commit
+        const cp=screenToCanvas(ptr.x,ptr.y);
+        commitShape(drawState.x,drawState.y,cp.x,cp.y);
+        drawState=null; p1Waiting=false;
+        return;
+      }
+    }
+    drawState=null; p1Waiting=false;
+    redrawOverlay();
+    return;
+  }
+
+  // Drag released — commit shape at lift position
+  if (!drawState) return;
+  let p=screenToCanvas(e.clientX,e.clientY);
+  let x1=drawState.x, y1=drawState.y;
+  if (mode!=='boxmeasure'&&mode!=='boxanno') {
+    const snapped=snapTo90(x1,y1,p.x,p.y);
+    p={x:snapped.x,y:snapped.y};
+  }
+  const pixels=Math.hypot(p.x-x1,p.y-y1);
+  // Short drag (<40px) → p1Waiting: move p1 to where finger lifted
+  if (pixels < 40 && !p1Waiting) {
+    drawState={x:p.x,y:p.y}; // use drag-end position as p1
+    p1Waiting=true;
+    showToast('Point 1 set — tap or drag to set point 2');
+    redrawOverlay();
+    return;
+  }
+  drawState=null; p1Waiting=false;
+  commitShape(x1,y1,p.x,p.y);
+},{passive:false});
+
+touchLayer.addEventListener('pointercancel', e=>{
+  clearDragTimer(); dragActive=false;
+  delete activePointers[e.pointerId];
+  hideMagnifier(); drawState=null; p1Waiting=false; redrawOverlay();
+  if (Object.keys(activePointers).length===0) { gestureState=null; pinchEndTime=Date.now(); }
+},{passive:false});
+
+// Double-tap to fit (no mode, pinch-guarded)
+let lastTapTime=0, lastTapX=0, lastTapY=0;
+touchLayer.addEventListener('touchend', e=>{
+  if (mode||e.touches.length!==0||e.changedTouches.length!==1) return;
+  if (Date.now()-pinchEndTime<700) return;
+  const n=Date.now(), t=e.changedTouches[0];
+  if (n-lastTapTime<300&&Math.hypot(t.clientX-lastTapX,t.clientY-lastTapY)<40) {
+    fitToScreen(); lastTapTime=0;
+  } else { lastTapTime=n; lastTapX=t.clientX; lastTapY=t.clientY; }
+},{passive:true});
+
+// Mouse wheel zoom
+canvasViewport.addEventListener('wheel', e=>{
+  e.preventDefault();
+  const r=canvasViewport.getBoundingClientRect();
+  const cx=e.clientX-r.left, cy=e.clientY-r.top;
+  const nz=Math.max(minZoom,Math.min(maxZoom,zoom*(e.deltaY<0?1.12:0.89)));
+  panX=cx-(cx-panX)*(nz/zoom); panY=cy-(cy-panY)*(nz/zoom);
+  zoom=nz; applyTransform();
+},{passive:false});
+
+// ── MODE ──
+const MEASURE_MODES=new Set(['measure','area','boxmeasure','calibrate']);
+const DRAW_MODES=new Set(['draw','boxanno','circleanno','textanno','cloudanno']);
+
+function setMode(m) {
+  const prev=mode;
+  mode=mode===m?null:m;
+  selectedItem=null; hideDeleteFloat(); p1Waiting=false; areaPts=[]; areaPts=[];
+  const measActive=MEASURE_MODES.has(mode);
+  const drawActive=DRAW_MODES.has(mode);
+  measureBtn.classList.toggle('active', measActive);
+  calibrateBtn.classList.toggle('active', mode==='calibrate');
+  drawBtn.classList.toggle('active', drawActive);
+  selectBtn.classList.toggle('active', mode==='select');
+  // color row now in submenu, not shown separately
+  closeAllSubmenus();
+  drawState=null; hideMagnifier(); redrawOverlay();
+  if(mode==='measure') showToast('Hold & drag to measure · short drag sets point 1');
+  else if(mode==='calibrate') showToast('Hold & drag over a known dimension');
+  else if(mode==='draw') showToast('Hold & drag to draw · short drag sets point 1');
+  else if(mode==='boxanno') showToast('Drag corner-to-corner to draw a box');
+  else if(mode==='circleanno') showToast('Drag to draw a circle');
+  else if(mode==='textanno') showToast('Tap to place text · type then tap elsewhere to confirm');
+  else if(mode==='cloudanno') showToast('Drag corner-to-corner to draw a cloud');
+  else if(mode==='area') showToast('Tap to add polygon points · tap near start to close');
+  else if(mode==='boxmeasure') showToast('Drag from one corner to the opposite corner');
+  else if(mode==='select') showToast('Tap a line to select · Delete to remove');
+  else hideToast();
+}
+
+// ── SUBMENU LOGIC ──
+function closeAllSubmenus(){
+  document.querySelectorAll('.submenu').forEach(s=>s.classList.remove('open'));
+}
+function toggleSubmenu(id){
+  const s=document.getElementById(id);
+  const wasOpen=s.classList.contains('open');
+  closeAllSubmenus();
+  if(!wasOpen) s.classList.add('open');
+}
+// Close submenus on outside tap
+document.addEventListener('pointerdown',e=>{
+  if(!e.target.closest('.submenu-wrap')) closeAllSubmenus();
+},{passive:true});
+
+// Measure button: tap opens submenu; submenu item activates mode
+measureBtn.addEventListener('click',e=>{
+  if(!pdfDoc){ showToast('Open a PDF first'); return; }
+  toggleSubmenu('measure-submenu');
+});
+
+// Draw button: tap opens submenu
+drawBtn.addEventListener('click',e=>{
+  if(!pdfDoc){ showToast('Open a PDF first'); return; }
+  toggleSubmenu('draw-submenu');
+});
+
+// Sub-menu item clicks
+document.querySelectorAll('#measure-submenu .submenu-item').forEach(item=>{
+  item.addEventListener('click',e=>{
+    e.stopPropagation();
+    const m=item.dataset.mode;
+    measureSubMode=m;
+    document.querySelectorAll('#measure-submenu .submenu-item').forEach(i=>i.classList.remove('active'));
+    item.classList.add('active');
+    closeAllSubmenus();
+    if(pdfDoc) setMode(m); else showToast('Open a PDF first');
+  });
+});
+document.querySelectorAll('#draw-submenu .submenu-item').forEach(item=>{
+  item.addEventListener('click',e=>{
+    e.stopPropagation();
+    const m=item.dataset.mode;
+    drawSubMode=m;
+    document.querySelectorAll('#draw-submenu .submenu-item').forEach(i=>i.classList.remove('active'));
+    item.classList.add('active');
+    closeAllSubmenus();
+    if(pdfDoc) setMode(m); else showToast('Open a PDF first');
+  });
+});
+// Color sub-sub-menu toggle
+const colorTrigger=document.getElementById('sub-color-trigger');
+const colorSubsub=document.getElementById('color-subsub');
+const colorIndicator=document.getElementById('color-indicator');
+colorTrigger.addEventListener('click',e=>{
+  e.stopPropagation();
+  const wasOpen=colorSubsub.classList.contains('open');
+  colorSubsub.classList.toggle('open',!wasOpen);
+});
+// Close subsub on outside click
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#color-subsub')&&!e.target.closest('#sub-color-trigger')){
+    colorSubsub.classList.remove('open');
+  }
+},{passive:true});
+
+// Color swatches in submenu
+document.querySelectorAll('#submenu-color-row .color-swatch').forEach(sw=>{
+  sw.addEventListener('click',e=>{
+    e.stopPropagation();
+    drawColor=sw.dataset.color;
+    document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));
+    sw.classList.add('active');
+    // Update indicator dot
+    if(colorIndicator) colorIndicator.style.background=drawColor;
+    // Close subsub after picking
+    colorSubsub.classList.remove('open');
+  });
+});
+// Sync indicator to current drawColor on init
+if(colorIndicator) colorIndicator.style.background = drawColor;
+
+calibrateBtn.onclick=()=>{
+  if(!pdfDoc){showToast('Open a PDF first');return;}
+  if(mode==='calibrate'){setMode(null);return;}
+  setMode('calibrate');
+};
+selectBtn.onclick=()=>{ if(pdfDoc) setMode('select'); else showToast('Open a PDF first'); };
+
+// color swatches wired above in submenu section
+
+// ── COMMIT SHAPE ──
+function commitShape(x1,y1,x2,y2) {
+  const pixels=Math.hypot(x2-x1,y2-y1);
+  if (mode==='measure') {
+    if(pixels<2) return;
+    measurements.push({type:'line',x1,y1,x2,y2,pixels,label:computeLabel(pixels)||`${Math.round(pixels)}px`});
+    redrawOverlay(); autoSave();
+    showToast('Measured! Drag or tap for next');
+  } else if (mode==='calibrate') {
+    calLine={x1,y1,x2,y2,pixels};
+    calInfoBox.textContent=`Line: ${Math.round(pixels)}px — enter its real-world length`;
+    redrawOverlay(); calSheet.classList.add('show');
+    setTimeout(()=>calValue.focus(),350);
+  } else if (mode==='draw') {
+    if(pixels<2) return;
+    annotations.push({type:'line',x1,y1,x2,y2,color:drawColor});
+    redrawOverlay(); autoSave();
+  } else if (mode==='boxanno') {
+    if(pixels<4) return;
+    annotations.push({type:'box',x1,y1,x2,y2,color:drawColor});
+    redrawOverlay(); autoSave();
+  } else if (mode==='circleanno') {
+    if(pixels<4) return;
+    // Store as center + radius (ellipse from bounding box corners)
+    const cx=(x1+x2)/2, cy=(y1+y2)/2;
+    const rx=Math.abs(x2-x1)/2, ry=Math.abs(y2-y1)/2;
+    annotations.push({type:'circle',cx,cy,rx,ry,color:drawColor});
+    redrawOverlay(); autoSave();
+  } else if (mode==='cloudanno') {
+    if(pixels<4) return;
+    annotations.push({type:'cloud',x1,y1,x2,y2,color:drawColor});
+    redrawOverlay(); autoSave();
+  } else if (mode==='boxmeasure') {
+    if(pixels<4) return;
+    const w=Math.abs(x2-x1), h=Math.abs(y2-y1);
+    measurements.push({type:'box',
+      x1:Math.min(x1,x2),y1:Math.min(y1,y2),
+      x2:Math.max(x1,x2),y2:Math.max(y1,y2),
+      p1x:x1, p1y:y1,
+      pixels:w, pixels2:h,
+      label:computeLabel(w)||`${Math.round(w)}px`,
+      label2:computeLabel(h)||`${Math.round(h)}px`,
+      swapAxis:false});
+    redrawOverlay(); autoSave();
+    showToast('Box measured!');
+  }
+}
+
+// ── COMMIT AREA ──
+function commitArea() {
+  if(areaPts.length<3) return;
+  // Compute area via shoelace (canvas pixels squared → real units if calibrated)
+  let area=0;
+  const n=areaPts.length;
+  for(let i=0;i<n;i++){
+    const j=(i+1)%n;
+    area+=areaPts[i].x*areaPts[j].y;
+    area-=areaPts[j].x*areaPts[i].y;
+  }
+  area=Math.abs(area)/2;
+  let areaLabel;
+  if(calibration){
+    const a=area/(calibration.pixelsPerUnit*calibration.pixelsPerUnit);
+    const u=calibration.unit;
+    areaLabel=`${a>=100?a.toFixed(1):a>=10?a.toFixed(2):a.toFixed(3)} ${u}²`;
+  } else {
+    areaLabel=`${Math.round(area)}px²`;
+  }
+  // Centroid for label
+  let cx=0,cy=0;
+  areaPts.forEach(p=>{cx+=p.x;cy+=p.y;});
+  cx/=n; cy/=n;
+  measurements.push({type:'area',pts:[...areaPts],area,label:areaLabel,cx,cy});
+  areaPts=[];
+  redrawOverlay(); autoSave();
+  showToast('Area measured!');
+}
+
+// ── OVERLAY ──
+function redrawOverlay() {
+  svgOverlay.innerHTML='';
+  if (calLine) {
+    drawLine(calLine.x1,calLine.y1,calLine.x2,calLine.y2,'#ff0000','2','6,4',null);
+    drawDots(calLine.x1,calLine.y1,calLine.x2,calLine.y2,'#ff0000');
+  }
+
+  // Annotations
+  annotations.forEach((a,i)=>{
+    const sel=selectedItem&&selectedItem.type==='annotation'&&selectedItem.index===i;
+    if(a.type==='box') {
+      if(sel) drawRect(a.x1,a.y1,a.x2,a.y2,'rgba(255,220,0,0.4)','8','');
+      drawRect(a.x1,a.y1,a.x2,a.y2,a.color,sel?'3':'2',null);
+    } else if(a.type==='circle') {
+      if(sel){
+        const el=svgEl('ellipse',{cx:a.cx,cy:a.cy,rx:a.rx,ry:a.ry,stroke:'rgba(255,220,0,0.5)','stroke-width':'7',fill:'none'});
+        svgOverlay.appendChild(el);
+      }
+      const el=svgEl('ellipse',{cx:a.cx,cy:a.cy,rx:a.rx,ry:a.ry,stroke:a.color,'stroke-width':sel?'3':'2',fill:'none'});
+      svgOverlay.appendChild(el);
+    } else if(a.type==='cloud') {
+      if(sel) drawCloudShape(a.x1,a.y1,a.x2,a.y2,'rgba(255,220,0,0.5)','7');
+      drawCloudShape(a.x1,a.y1,a.x2,a.y2,a.color,sel?'3':'2');
+    } else if(a.type==='text') {
+      drawTextAnno(a,sel);
+    } else {
+      if(sel) drawLine(a.x1,a.y1,a.x2,a.y2,'rgba(255,220,0,0.5)','7','',null);
+      drawLine(a.x1,a.y1,a.x2,a.y2,a.color,sel?'3.5':'2',null,null);
+    }
+  });
+
+  // Measurements
+  measurements.forEach((m,i)=>{
+    const sel=selectedItem&&selectedItem.type==='measurement'&&selectedItem.index===i;
+    if(m.type==='area') {
+      // Draw polygon
+      if(sel){
+        const pg=svgEl('polygon',{points:m.pts.map(p=>`${p.x},${p.y}`).join(' '),
+          fill:'rgba(255,220,0,0.15)',stroke:'rgba(255,220,0,0.6)','stroke-width':'6',
+          'stroke-linejoin':'round','stroke-linecap':'round'});
+        svgOverlay.appendChild(pg);
+      }
+      const pg=svgEl('polygon',{points:m.pts.map(p=>`${p.x},${p.y}`).join(' '),
+        fill:'rgba(255,0,0,0.08)',stroke:'#ff0000',
+        'stroke-width':sel?'2.5':'1.8','stroke-linejoin':'round',
+        'stroke-linecap':'round','stroke-dasharray':'6,3'});
+      svgOverlay.appendChild(pg);
+      // Area label at centroid
+      drawCentreLabel(m.cx,m.cy,m.label);
+    } else if(m.type==='box') {
+      if(sel){drawRect(m.x1,m.y1,m.x2,m.y2,'rgba(255,220,0,0.4)','8','');}
+      const rx1=m.x1,ry1=m.y1,rx2=m.x2,ry2=m.y2;
+      const strokeW=sel?'3':'2';
+      const fade='rgba(255,0,0,0.4)';
+      // p1 corner: where the user started dragging
+      const p1x=m.p1x!=null?m.p1x:rx1, p1y=m.p1y!=null?m.p1y:ry1;
+      // Which side of the rect is p1 on?
+      const p1IsLeft = Math.abs(p1x-rx1) <= Math.abs(p1x-rx2);
+      const p1IsTop  = Math.abs(p1y-ry1) <= Math.abs(p1y-ry2);
+      // p1-adjacent edges (these start faded — you're measuring AWAY from p1)
+      const hP1y = p1IsTop ? ry1 : ry2;   // horizontal edge at p1's corner
+      const vP1x = p1IsLeft ? rx1 : rx2;  // vertical edge at p1's corner
+      // p2-adjacent edges (opposite corner — where you're measuring TO, gets labels)
+      const hP2y = p1IsTop ? ry2 : ry1;
+      const vP2x = p1IsLeft ? rx2 : rx1;
+      // swap toggles which corner's edges get the labels
+      const sw = !!m.swapAxis;
+      const [hLabelY, hFadeY] = sw ? [hP1y, hP2y] : [hP2y, hP1y];
+      const [vLabelX, vFadeX] = sw ? [vP1x, vP2x] : [vP2x, vP1x];
+      // Draw all 4 sides
+      drawLine(rx1,hLabelY,rx2,hLabelY,'#ff0000',strokeW,null,null);
+      drawLine(rx1,hFadeY,rx2,hFadeY,fade,strokeW,null,null);
+      drawLine(vLabelX,ry1,vLabelX,ry2,'#ff0000',strokeW,null,null);
+      drawLine(vFadeX,ry1,vFadeX,ry2,fade,strokeW,null,null);
+      // Ticks and labels on the labelled sides
+      drawDots(rx1,hLabelY,rx2,hLabelY,'#ff0000');
+      drawDots(vLabelX,ry1,vLabelX,ry2,'#ff0000');
+      drawLabel(rx1,hLabelY,rx2,hLabelY,m.label);
+      drawLabel(vLabelX,ry1,vLabelX,ry2,m.label2);
+    } else {
+      if(sel) drawLine(m.x1,m.y1,m.x2,m.y2,'rgba(255,220,0,0.5)','7','',null);
+      drawLine(m.x1,m.y1,m.x2,m.y2,'#ff0000',sel?'3.5':'2',null,null);
+      drawDots(m.x1,m.y1,m.x2,m.y2,'#ff0000');
+      drawLabel(m.x1,m.y1,m.x2,m.y2,m.label||`${Math.round(m.pixels)}px`);
+    }
+  });
+
+  // In-progress area polygon
+  if(mode==='area'&&areaPts.length>0){
+    if(areaPts.length>=2){
+      for(let i=0;i<areaPts.length-1;i++){
+        drawLine(areaPts[i].x,areaPts[i].y,areaPts[i+1].x,areaPts[i+1].y,'#ff0000','2',null,null);
+      }
+      if(areaPts.length>=3){
+        // Closing preview line (faint)
+        const f=areaPts[0], l=areaPts[areaPts.length-1];
+        drawLine(l.x,l.y,f.x,f.y,'rgba(255,0,0,0.3)','1.5','4,3',null);
+        // Close-zone circle at start
+        svgOverlay.appendChild(svgEl('circle',{cx:f.x,cy:f.y,r:`${20/zoom}`,
+          fill:'rgba(255,0,0,0.1)',stroke:'rgba(255,0,0,0.5)','stroke-width':'1.5'}));
+      }
+    }
+    areaPts.forEach(pt=>{
+      svgOverlay.appendChild(svgEl('circle',{cx:pt.x,cy:pt.y,r:'5',fill:'#ff0000',opacity:'0.9'}));
+    });
+  }
+
+  // Point 1 waiting indicator - size adjusted for zoom
+  const p1Color=DRAW_MODES.has(mode)?drawColor:'#ff0000';
+  const baseR=8, bigR=16; // base radii in canvas pixels
+  const r1=baseR/zoom, r2=bigR/zoom; // adjust for zoom
+  if (drawState) {
+    if (p1Waiting) {
+      svgOverlay.appendChild(svgEl('circle',{cx:drawState.x,cy:drawState.y,r:r2,
+        fill:'none',stroke:p1Color,'stroke-width':(1.5/zoom),opacity:'0.4'}));
+    }
+    svgOverlay.appendChild(svgEl('circle',{cx:drawState.x,cy:drawState.y,r:r1,
+      fill:p1Color,opacity:'0.9'}));
+  }
+}
+
+function drawGhost(x1,y1,x2,y2) {
+  const c=DRAW_MODES.has(mode)?drawColor:'#ff0000';
+  if(mode==='boxanno'||mode==='boxmeasure') {
+    if(mode==='boxmeasure'){
+      const rX1=Math.min(x1,x2),rY1=Math.min(y1,y2),rX2=Math.max(x1,x2),rY2=Math.max(y1,y2);
+      const w=rX2-rX1, h=rY2-rY1;
+      // p1 is (x1,y1): determine which corner of the normalized rect it corresponds to
+      const p1IsLeft2 = x1 <= x2;
+      const p1IsTop2  = y1 <= y2;
+      const hFadeY2 = p1IsTop2 ? rY1 : rY2;   // p1-side horizontal edge
+      const hLabelY2 = p1IsTop2 ? rY2 : rY1;  // p2-side horizontal edge (labelled)
+      const vFadeX2 = p1IsLeft2 ? rX1 : rX2;
+      const vLabelX2 = p1IsLeft2 ? rX2 : rX1;
+      const fade2='rgba(255,0,0,0.35)';
+      drawLine(rX1,hLabelY2,rX2,hLabelY2,c,'1.5','5,4',null);
+      drawLine(rX1,hFadeY2,rX2,hFadeY2,fade2,'1.5','5,4',null);
+      drawLine(vLabelX2,rY1,vLabelX2,rY2,c,'1.5','5,4',null);
+      drawLine(vFadeX2,rY1,vFadeX2,rY2,fade2,'1.5','5,4',null);
+      drawDots(rX1,hLabelY2,rX2,hLabelY2,'#ff0000');
+      drawDots(vLabelX2,rY1,vLabelX2,rY2,'#ff0000');
+      drawLabel(rX1,hLabelY2,rX2,hLabelY2,computeLabel(w)||`${Math.round(w)}px`);
+      drawLabel(vLabelX2,rY1,vLabelX2,rY2,computeLabel(h)||`${Math.round(h)}px`);
+    } else {
+      drawRect(x1,y1,x2,y2,c,'1.5','5,4');
+    }
+  } else if(mode==='circleanno') {
+    const cx=(x1+x2)/2,cy=(y1+y2)/2,rx=Math.abs(x2-x1)/2,ry=Math.abs(y2-y1)/2;
+    const el=svgEl('ellipse',{cx,cy,rx,ry,stroke:c,'stroke-width':'1.5','stroke-dasharray':'5,4',fill:'none'});
+    svgOverlay.appendChild(el);
+  } else if(mode==='cloudanno') {
+    drawCloudShape(x1,y1,x2,y2,c,'1.5');
+  } else {
+    drawLine(x1,y1,x2,y2,c,'1.5','5,4',null);
+    drawDots(x1,y1,x2,y2,c);
+    if(mode!=='draw'&&!DRAW_MODES.has(mode)){
+      const px=Math.hypot(x2-x1,y2-y1);
+      drawLabel(x1,y1,x2,y2,computeLabel(px)||`${Math.round(px)}px`);
+    }
+  }
+}
+
+function drawLine(x1,y1,x2,y2,color,w,dash,me) {
+  const a={x1,y1,x2,y2,stroke:color,'stroke-width':w,'stroke-linecap':'round',fill:'none'};
+  if(dash) a['stroke-dasharray']=dash;
+  if(me) a['marker-end']=me;
+  svgOverlay.appendChild(svgEl('line',a));
+}
+
+function drawRect(x1,y1,x2,y2,color,w,dash) {
+  const rx=Math.min(x1,x2), ry=Math.min(y1,y2);
+  const rw=Math.abs(x2-x1), rh=Math.abs(y2-y1);
+  const a={x:rx,y:ry,width:rw,height:rh,stroke:color,'stroke-width':w,
+    'stroke-linecap':'round','stroke-linejoin':'round',fill:'none'};
+  if(dash) a['stroke-dasharray']=dash;
+  svgOverlay.appendChild(svgEl('rect',a));
+}
+
+function drawCentreLabel(cx,cy,text) {
+  const tw=text.length*7.8+16;
+  const g=svgEl('g',{});
+  g.appendChild(svgEl('rect',{x:cx-tw/2,y:cy-15,width:tw,height:18,fill:'rgba(255,255,255,0.95)',rx:'5'}));
+  const t=svgEl('text',{x:cx,y:cy-3,'text-anchor':'middle','dominant-baseline':'auto',class:'measure-label'});
+  t.textContent=text; g.appendChild(t); svgOverlay.appendChild(g);
+}
+
+function drawDots(x1,y1,x2,y2,color) {
+  // Draw perpendicular tick marks centred exactly on each endpoint
+  const dx=x2-x1, dy=y2-y1;
+  const len=Math.hypot(dx,dy);
+  if (len<1) return;
+  // Perpendicular unit vector
+  const perpX=-dy/len, perpY=dx/len;
+  const T=7; // half-tick length in canvas px
+  // Tick at start
+  svgOverlay.appendChild(svgEl('line',{
+    x1:Math.round((x1+perpX*T)*100)/100, y1:Math.round((y1+perpY*T)*100)/100,
+    x2:Math.round((x1-perpX*T)*100)/100, y2:Math.round((y1-perpY*T)*100)/100,
+    stroke:color, 'stroke-width':'2', 'stroke-linecap':'round'
+  }));
+  // Tick at end
+  svgOverlay.appendChild(svgEl('line',{
+    x1:Math.round((x2+perpX*T)*100)/100, y1:Math.round((y2+perpY*T)*100)/100,
+    x2:Math.round((x2-perpX*T)*100)/100, y2:Math.round((y2-perpY*T)*100)/100,
+    stroke:color, 'stroke-width':'2', 'stroke-linecap':'round'
+  }));
+}
+
+function drawLabel(x1,y1,x2,y2,text,color='#ff0000') {
+  const mx=(x1+x2)/2, my=(y1+y2)/2;
+  const angle=Math.atan2(y2-y1,x2-x1);
+  const angleDeg=angle*180/Math.PI;
+  const flip=(angleDeg>90||angleDeg<-90)?180:0;
+  const tw=text.length*7.8+16;
+  // Offset perpendicular to line so label doesn't cover it
+  const perpX=-Math.sin(angle)*16, perpY=Math.cos(angle)*16;
+  const ox=perpY>0?-perpX:perpX, oy=perpY>0?-perpY:perpY;
+  const lx=mx+ox, ly=my+oy;
+  const g=svgEl('g',{transform:`rotate(${angleDeg+flip},${lx},${ly})`});
+  g.appendChild(svgEl('rect',{x:lx-tw/2,y:ly-15,width:tw,height:18,fill:'rgba(255,255,255,0.95)',rx:'4'}));
+  const t=svgEl('text',{x:lx,y:ly-3,'text-anchor':'middle','dominant-baseline':'auto',class:'measure-label',style:`fill:${color}`});
+  t.textContent=text; g.appendChild(t); svgOverlay.appendChild(g);
+}
+
+// Cloud annotation shape
+function drawCloudShape(x1,y1,x2,y2,color,w) {
+  const rx=Math.min(x1,x2), ry=Math.min(y1,y2);
+  const rw=Math.abs(x2-x1), rh=Math.abs(y2-y1);
+  if(rw<4||rh<4) return;
+  // Build cloud path: series of arcs along a rounded rectangle
+  const bumpR=Math.min(rw,rh)*0.12;
+  const bumpD=bumpR*2;
+  const nx=Math.max(2,Math.round(rw/bumpD/2));
+  const ny=Math.max(2,Math.round(rh/bumpD/2));
+  const bx=rw/(nx*2), by=rh/(ny*2);
+  let d='';
+  // Top edge left→right
+  for(let i=0;i<nx;i++){
+    const cx=rx+bx+i*2*bx, cy=ry;
+    if(i===0) d+=`M${cx-bx},${cy} `;
+    d+=`A${bx},${by*0.5} 0 0 1 ${cx+bx},${cy} `;
+  }
+  // Right edge top→bottom
+  for(let i=0;i<ny;i++){
+    const cx=rx+rw, cy=ry+by+i*2*by;
+    d+=`A${bx*0.5},${by} 0 0 1 ${cx},${cy+by} `;
+  }
+  // Bottom edge right→left
+  for(let i=0;i<nx;i++){
+    const cx=rx+rw-bx-i*2*bx, cy=ry+rh;
+    d+=`A${bx},${by*0.5} 0 0 1 ${cx-bx},${cy} `;
+  }
+  // Left edge bottom→top
+  for(let i=0;i<ny;i++){
+    const cx=rx, cy=ry+rh-by-i*2*by;
+    d+=`A${bx*0.5},${by} 0 0 1 ${cx},${cy-by} `;
+  }
+  d+='Z';
+  const el=svgEl('path',{d,stroke:color,'stroke-width':w,'stroke-linejoin':'round','stroke-linecap':'round',fill:'rgba(255,255,255,0.04)'});
+  svgOverlay.appendChild(el);
+}
+
+// Text annotation: renders a text box
+let textInputActive=null; // {x,y,color,el}
+function drawTextAnno(a,sel){
+  const tw=Math.max(60,(a.text||'').length*8+20);
+  const g=svgEl('g',{});
+  if(sel){
+    g.appendChild(svgEl('rect',{x:a.x-4,y:a.y-18,width:tw+8,height:24,fill:'rgba(255,220,0,0.25)',rx:'3'}));
+  }
+  const t=svgEl('text',{x:a.x,y:a.y,'dominant-baseline':'auto',
+    'font-family':"'DM Mono', monospace",'font-size':'14',
+    'font-weight':'500',fill:a.color,'paint-order':'stroke',
+    stroke:'white','stroke-width':'2.5','stroke-linejoin':'round'});
+  t.textContent=a.text||'';
+  g.appendChild(t);
+  svgOverlay.appendChild(g);
+}
+
+function svgEl(tag,attrs) {
+  const el=document.createElementNS('http://www.w3.org/2000/svg',tag);
+  Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,v));
+  return el;
+}
+
+function computeLabel(px) {
+  if(!calibration) return null;
+  const v=px/calibration.pixelsPerUnit;
+  return `${v>=100?v.toFixed(1):v>=10?v.toFixed(2):v.toFixed(3)} ${calibration.unit}`;
+}
+
+function updateLabels() {
+  measurements=measurements.map(m=>{
+    if(m.type==='line'||!m.type){
+      return {...m,label:computeLabel(m.pixels)||`${Math.round(m.pixels)}px`};
+    } else if(m.type==='box'){
+      return {...m,
+        label:computeLabel(m.pixels)||`${Math.round(m.pixels)}px`,
+        label2:computeLabel(m.pixels2)||`${Math.round(m.pixels2)}px`};
+    } else if(m.type==='area'){
+      let areaLabel;
+      if(calibration){
+        const a=m.area/(calibration.pixelsPerUnit*calibration.pixelsPerUnit);
+        const u=calibration.unit;
+        areaLabel=`${a>=100?a.toFixed(1):a>=10?a.toFixed(2):a.toFixed(3)} ${u}²`;
+      } else {
+        areaLabel=`${Math.round(m.area)}px²`;
+      }
+      return {...m,label:areaLabel};
+    }
+    return m;
+  });
+}
+
+// ── CALIBRATION ──
+calConfirm.onclick=()=>{
+  const val=parseFloat(calValue.value), unit=calUnit.value;
+  if(!val||val<=0||!calLine){calValue.focus();return;}
+  calibration={pixelsPerUnit:calLine.pixels/val,unit};
+  scaleText.textContent=`1${unit}≈${Math.round(calibration.pixelsPerUnit)}px`;
+  scaleBadge.classList.add('visible');
+  calSheet.classList.remove('show');
+  calLine=null; calValue.value='';
+  updateLabels(); redrawOverlay();
+  autoSave();
+  mode='measure';
+  measureBtn.classList.add('active'); calibrateBtn.classList.remove('active');
+  drawState=null;
+  showToast('Scale set! Touch & drag to measure');
+};
+calCancel.onclick=()=>{
+  calSheet.classList.remove('show'); calLine=null; redrawOverlay();
+  if (!mode) { mode='calibrate'; calibrateBtn.classList.add('active'); showToast('Draw a new calibration line'); }
+};
+calValue.addEventListener('keydown',e=>{if(e.key==='Enter')calConfirm.click();});
+calSheet.addEventListener('click',e=>{if(e.target===calSheet)calCancel.click();});
+
+// ── UNDO / CLEAR ──
+undoBtn.onclick=()=>{
+  if(mode==='area'&&areaPts.length>0){areaPts.pop();redrawOverlay();return;}
+  if(drawState){drawState=null;p1Waiting=false;hideMagnifier();redrawOverlay();return;}
+  if(selectedItem){deleteSelected();return;}
+  if((mode==='draw'||mode==='boxanno')&&annotations.length){annotations.pop();redrawOverlay();autoSave();return;}
+  if(measurements.length){measurements.pop();redrawOverlay();autoSave();}
+};
+clearBtn.onclick=()=>{
+  if(!pdfDoc||(measurements.length===0&&annotations.length===0)){return;}
+  document.getElementById('confirm-dialog').classList.add('show');
+};
+document.getElementById('confirm-no').onclick=()=>{ document.getElementById('confirm-dialog').classList.remove('show'); };
+document.getElementById('confirm-yes').onclick=()=>{
+  document.getElementById('confirm-dialog').classList.remove('show');
+  measurements=[]; annotations=[]; drawState=null; calLine=null;
+  selectedItem=null; areaPts=[]; p1Waiting=false;
+  hideMagnifier(); hideDeleteFloat(); redrawOverlay(); autoSave();
+  showToast('Cleared');
+};
+document.getElementById('confirm-dialog').addEventListener('click',e=>{
+  if(e.target===document.getElementById('confirm-dialog')) document.getElementById('confirm-dialog').classList.remove('show');
+});
+
+// ── SELECT MODE ──
+function pointToSegmentDist(px,py,x1,y1,x2,y2){
+  const dx=x2-x1,dy=y2-y1;
+  const lenSq=dx*dx+dy*dy;
+  if(lenSq===0) return Math.hypot(px-x1,py-y1);
+  const t=Math.max(0,Math.min(1,((px-x1)*dx+(py-y1)*dy)/lenSq));
+  return Math.hypot(px-(x1+t*dx),py-(y1+t*dy));
+}
+
+function handleSelectTap(cx,cy){
+  const HIT=20/zoom;
+  let best=null, bestDist=HIT;
+
+  measurements.forEach((m,i)=>{
+    let d=Infinity;
+    if(m.type==='area'){
+      // Check proximity to any edge of the polygon
+      const pts=m.pts;
+      for(let j=0;j<pts.length;j++){
+        const k=(j+1)%pts.length;
+        d=Math.min(d,pointToSegmentDist(cx,cy,pts[j].x,pts[j].y,pts[k].x,pts[k].y));
+      }
+    } else if(m.type==='box'){
+      // Check all 4 edges
+      const rx1=m.x1,ry1=m.y1,rx2=m.x2,ry2=m.y2;
+      d=Math.min(
+        pointToSegmentDist(cx,cy,rx1,ry1,rx2,ry1),
+        pointToSegmentDist(cx,cy,rx2,ry1,rx2,ry2),
+        pointToSegmentDist(cx,cy,rx2,ry2,rx1,ry2),
+        pointToSegmentDist(cx,cy,rx1,ry2,rx1,ry1)
+      );
+    } else {
+      d=pointToSegmentDist(cx,cy,m.x1,m.y1,m.x2,m.y2);
+    }
+    if(d<bestDist){bestDist=d;best={type:'measurement',index:i};}
+  });
+
+  annotations.forEach((a,i)=>{
+    let d=Infinity;
+    if(a.type==='box'){
+      d=Math.min(
+        pointToSegmentDist(cx,cy,a.x1,a.y1,a.x2,a.y1),
+        pointToSegmentDist(cx,cy,a.x2,a.y1,a.x2,a.y2),
+        pointToSegmentDist(cx,cy,a.x2,a.y2,a.x1,a.y2),
+        pointToSegmentDist(cx,cy,a.x1,a.y2,a.x1,a.y1)
+      );
+    } else if(a.type==='circle'){
+      // Distance to ellipse perimeter (approx)
+      const dx=(cx-a.cx)/a.rx, dy=(cy-a.cy)/a.ry;
+      d=Math.abs(Math.hypot(dx,dy)-1)*Math.min(a.rx,a.ry);
+    } else if(a.type==='cloud') {
+      d=Math.min(
+        pointToSegmentDist(cx,cy,a.x1,a.y1,a.x2,a.y1),
+        pointToSegmentDist(cx,cy,a.x2,a.y1,a.x2,a.y2),
+        pointToSegmentDist(cx,cy,a.x2,a.y2,a.x1,a.y2),
+        pointToSegmentDist(cx,cy,a.x1,a.y2,a.x1,a.y1)
+      );
+    } else if(a.type==='text') {
+      d=Math.hypot(cx-a.x,cy-a.y);
+    } else {
+      d=pointToSegmentDist(cx,cy,a.x1,a.y1,a.x2,a.y2);
+    }
+    if(d<bestDist){bestDist=d;best={type:'annotation',index:i};}
+  });
+
+  if(best){
+    const same=selectedItem&&selectedItem.type===best.type&&selectedItem.index===best.index;
+    selectedItem=same?null:best;
+    if(selectedItem) showDeleteFloat(selectedItem);
+    else hideDeleteFloat();
+  } else {
+    selectedItem=null; hideDeleteFloat();
+  }
+  redrawOverlay();
+}
+
+function showDeleteFloat(item){
+  const obj=item.type==='measurement'?measurements[item.index]:annotations[item.index];
+  if(!obj){hideDeleteFloat();return;}
+  // Find midpoint/centroid in canvas space
+  let mx,my;
+  if(obj.type==='area'){ mx=obj.cx; my=obj.cy; }
+  else if(obj.type==='box'||obj.type==='cloud'){ mx=(obj.x1+obj.x2)/2; my=(obj.y1+obj.y2)/2; }
+  else if(obj.type==='circle'){ mx=obj.cx; my=obj.cy; }
+  else if(obj.type==='text'){ mx=obj.x; my=obj.y; }
+  else { mx=(obj.x1+obj.x2)/2; my=(obj.y1+obj.y2)/2; }
+  // Show swap button for box measurements
+  const swapFloat=document.getElementById('swap-float');
+  if(item.type==='measurement'&&obj.type==='box'){
+    const r=canvasViewport.getBoundingClientRect();
+    const ssx=r.left+panX+mx*zoom, ssy=r.top+panY+my*zoom;
+    const sfw=80, sfh=32;
+    let sfx=ssx-sfw/2-50, sfy=ssy-sfh-18;
+    sfx=Math.max(8,Math.min(window.innerWidth-sfw-8,sfx));
+    sfy=Math.max(8,Math.min(window.innerHeight-sfh-8,sfy));
+    swapFloat.style.left=sfx+'px'; swapFloat.style.top=sfy+'px';
+    swapFloat.classList.add('show');
+  } else { swapFloat.classList.remove('show'); }
+  const r=canvasViewport.getBoundingClientRect();
+  const sx=r.left+panX+mx*zoom, sy=r.top+panY+my*zoom;
+  const fw=90, fh=32;
+  let fx=sx-fw/2, fy=sy-fh-18;
+  fx=Math.max(8,Math.min(window.innerWidth-fw-8,fx));
+  fy=Math.max(8,Math.min(window.innerHeight-fh-8,fy));
+  deleteFloat.style.left=fx+'px'; deleteFloat.style.top=fy+'px';
+  deleteFloat.classList.add('show');
+}
+
+function hideDeleteFloat(){
+  deleteFloat.classList.remove('show');
+  document.getElementById('swap-float').classList.remove('show');
+}
+
+function deleteSelected(){
+  if(!selectedItem) return;
+  // Capture before nulling to avoid stale ref
+  const {type,index}=selectedItem;
+  selectedItem=null; hideDeleteFloat();
+  if(type==='measurement') measurements.splice(index,1);
+  else if(type==='annotation') annotations.splice(index,1);
+  redrawOverlay(); autoSave();
+  showToast('Deleted');
+}
+deleteFloat.onclick=deleteSelected;
+document.getElementById('swap-float').onclick=()=>{
+  if(!selectedItem||selectedItem.type!=='measurement') return;
+  const m=measurements[selectedItem.index];
+  if(!m||m.type!=='box') return;
+  m.swapAxis=!m.swapAxis;
+  redrawOverlay(); autoSave();
+};
+
+// ── SHARE / SCREENSHOT ──
+let shareTimer=null;
+function showShareProgress(msg){
+  shareProgress.textContent=msg;
+  shareProgress.classList.add('show');
+  clearTimeout(shareTimer);
+}
+function hideShareProgress(){
+  shareTimer=setTimeout(()=>shareProgress.classList.remove('show'),2000);
+}
+
+shareBtn.onclick=async()=>{
+  if(!pdfDoc){showToast('Open a PDF first');return;}
+  showShareProgress('Rendering…');
+  try{
+    // Composite PDF canvas + SVG overlay into one image
+    const w=pdfCanvas.width, h=pdfCanvas.height;
+    const out=document.createElement('canvas');
+    out.width=w; out.height=h;
+    const ctx=out.getContext('2d');
+    // Draw PDF
+    ctx.drawImage(pdfCanvas,0,0);
+    // Serialize SVG and draw it
+    const svgData=new XMLSerializer().serializeToString(svgOverlay);
+    const svgBlob=new Blob([svgData],{type:'image/svg+xml;charset=utf-8'});
+    const url=URL.createObjectURL(svgBlob);
+    await new Promise((res,rej)=>{
+      const img=new Image();
+      img.onload=()=>{ ctx.drawImage(img,0,0); URL.revokeObjectURL(url); res(); };
+      img.onerror=rej;
+      img.src=url;
+    });
+    showShareProgress('Sharing…');
+    const filename=(currentFilename||'pdf').replace(/\.pdf$/i,'')+'-annotated.png';
+    if(navigator.share && navigator.canShare){
+      out.toBlob(async blob=>{
+        const file=new File([blob],filename,{type:'image/png'});
+        if(navigator.canShare({files:[file]})){
+          try{ await navigator.share({files:[file],title:'MeasurePDF'}); showShareProgress('Shared!'); }
+          catch(e){ if(e.name!=='AbortError') downloadCanvas(out,filename); }
+        } else { downloadCanvas(out,filename); }
+        hideShareProgress();
+      },'image/png');
+    } else {
+      downloadCanvas(out,filename);
+      showShareProgress('Saved!');
+      hideShareProgress();
+    }
+  }catch(e){ showShareProgress('Error — try again'); hideShareProgress(); }
+};
+
+function downloadCanvas(canvas,filename){
+  const a=document.createElement('a');
+  a.href=canvas.toDataURL('image/png');
+  a.download=filename; a.click();
+}
+
+// ── PAGE NAV ──
+function updatePageNav(){
+  prevBtn.disabled=currentPage<=1;
+  nextBtn.disabled=currentPage>=totalPages;
+  // Hide the entire page nav widget when there's only one page
+  if(totalPages<=1) pageNav.classList.remove('show');
+  else pageNav.classList.add('show');
+}
+prevBtn.onclick=()=>{if(currentPage>1){currentPage--;measurements=[];drawState=null;updatePageNav();renderPage(currentPage);}};
+nextBtn.onclick=()=>{if(currentPage<totalPages){currentPage++;measurements=[];drawState=null;updatePageNav();renderPage(currentPage);}};
+
+// ── FILE HANDLING ──
+function handleFile(f){if(f&&f.type==='application/pdf')loadPDF(f);else if(f)showToast('Please select a PDF file');}
+fileInput.onchange=e=>{handleFile(e.target.files[0]);fileInput.value='';};
+fileInputEmpty.onchange=e=>{handleFile(e.target.files[0]);fileInputEmpty.value='';};
+document.addEventListener('dragover',e=>e.preventDefault());
+document.addEventListener('drop',e=>{e.preventDefault();handleFile(e.dataTransfer.files[0]);});
+
+// ── TOAST ──
+let toastTimer=null;
+function showToast(msg){hintToast.textContent=msg;hintToast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(hideToast,3000);}
+function hideToast(){hintToast.classList.remove('show');}
+
+// ── KEYBOARD ──
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT') return;
+  if((e.key==='z')&&(e.ctrlKey||e.metaKey)) undoBtn.click();
+  if(e.key==='m'&&pdfDoc) setMode('measure');
+  if(e.key==='c'&&pdfDoc) setMode('calibrate');
+  if(e.key==='l'&&pdfDoc) setMode('draw');
+  if(e.key==='s'&&pdfDoc) setMode('select');
+  if((e.key==='Delete'||e.key==='Backspace')&&selectedItem) { e.preventDefault(); deleteSelected(); }
+  if(e.key==='Escape'){drawState=null;p1Waiting=false;areaPts=[];hideMagnifier();selectedItem=null;if(mode)setMode(null);redrawOverlay();}
+});
+</script>
+</body>
+</html>
